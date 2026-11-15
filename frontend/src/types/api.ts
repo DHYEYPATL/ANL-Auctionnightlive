@@ -37,6 +37,7 @@ export interface Rfq {
   status: RfqStatus
   published_at: string | null
   created_at: string
+  version: number
   auction_config: AuctionConfig | null
   invited_supplier_ids: string[]
   current_l1_total: string | null
@@ -70,6 +71,7 @@ export interface StandingRow {
   rank_label: string
   supplier_id: string | null
   supplier_label: string
+  is_self: boolean
   total_amount: string
   freight_charge: string | null
   origin_charge: string | null
@@ -77,12 +79,18 @@ export interface StandingRow {
   transit_time_days: number | null
   valid_until: string | null
   accepted_at: string
+  bid_seq: number | null
 }
 
 export interface StandingsResponse {
   rfq_id: string
   standings: StandingRow[]
   current_l1_total: string | null
+  version: number
+  status: string
+  server_now: string
+  current_close_at: string
+  forced_close_at: string
 }
 
 export interface AuctionEvent {
