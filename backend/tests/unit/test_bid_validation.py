@@ -20,7 +20,8 @@ def make_valid_bid(**overrides):
 
 def test_valid_bid_total():
     req = SubmitBidRequest(**make_valid_bid())
-    assert req.freight_charge + req.origin_charge + req.destination_charge == Decimal("175.00")
+    # Charges are stored as strings; use .total() method to compute
+    assert req.total() == Decimal("175.00")
 
 
 def test_negative_charge_rejected():
@@ -45,4 +46,4 @@ def test_zero_transit_allowed():
 
 def test_zero_charge_allowed():
     req = SubmitBidRequest(**make_valid_bid(freight_charge="0.00"))
-    assert req.freight_charge == Decimal("0.00")
+    assert req.parsed_freight() == Decimal("0.00")
