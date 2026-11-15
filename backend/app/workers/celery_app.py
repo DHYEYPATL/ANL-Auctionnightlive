@@ -14,6 +14,13 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    # HD-LIFE-05: reliability settings
+    task_acks_late=True,
+    task_reject_on_worker_lost=True,
+    task_time_limit=30,
+    task_soft_time_limit=20,
+    # Redis visibility timeout must exceed task_time_limit
+    broker_transport_options={"visibility_timeout": 3600},
     beat_schedule={
         "reconcile-auctions-every-30s": {
             "task": "app.workers.auction_tasks.reconcile_auctions",
