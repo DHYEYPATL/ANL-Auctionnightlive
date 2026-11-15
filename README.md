@@ -1,19 +1,54 @@
-# ANL — Auction Night Live
+<div align="center">
+  <img src="assets/logo.png" alt="Auction Night Live" width="600" />
 
-**British reverse-auction RFQ platform.** Buyers create auctions, invite suppliers, configure auto-extension rules. Suppliers compete with progressively lower bids. All auction logic is enforced server-side using PostgreSQL as the single source of truth.
+  <br/>
+  <br/>
+
+  <p>
+    <strong>A production-grade British reverse-auction RFQ platform.</strong><br/>
+    Buyers create auctions · Suppliers compete with live bids · Engine enforces every rule at the database level.
+  </p>
+
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.11-3776ab?style=flat-square&logo=python&logoColor=white" />
+    <img src="https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi&logoColor=white" />
+    <img src="https://img.shields.io/badge/React-18-61dafb?style=flat-square&logo=react&logoColor=black" />
+    <img src="https://img.shields.io/badge/PostgreSQL-15-336791?style=flat-square&logo=postgresql&logoColor=white" />
+    <img src="https://img.shields.io/badge/Redis-7-dc382d?style=flat-square&logo=redis&logoColor=white" />
+    <img src="https://img.shields.io/badge/Docker-Compose-2496ed?style=flat-square&logo=docker&logoColor=white" />
+    <img src="https://img.shields.io/badge/Tests-400%2B%20passing-22c55e?style=flat-square" />
+  </p>
+
+  <p>
+    <a href="deliverables/HLD.md"><strong>Architecture (HLD)</strong></a> ·
+    <a href="deliverables/SCHEMA.md"><strong>Database Schema</strong></a> ·
+    <a href="#-quick-start"><strong>Quick Start</strong></a> ·
+    <a href="#-walkthrough"><strong>Walkthrough</strong></a>
+  </p>
+</div>
 
 ---
 
-## 📦 Deliverables
+## Overview
 
-| Document | Location | Description |
+ANL implements a **British reverse auction** on top of a full-stack RFQ workflow. A buyer creates a Request for Quotation, invites suppliers, and configures an auto-extension auction with a hard forced-close cap. Invited suppliers submit progressively lower bids. The system ranks them in real time, extends the closing window on configured activity, and records every event in an append-only audit log with a SHA-256 hash chain.
+
+Every bid is decided at a single serialized instant on the database clock — there are no race conditions, no double-accepts, and no way for a client timestamp to influence the result.
+
+---
+
+## Deliverables
+
+| | Document | What's inside |
 |---|---|---|
-| **High-Level Design** | [`deliverables/HLD.md`](deliverables/HLD.md) | Architecture diagram, component responsibilities, bid transaction flow, extension logic, state machine, performance targets |
-| **Database Schema** | [`deliverables/SCHEMA.md`](deliverables/SCHEMA.md) | All 7 tables with column definitions, constraints, indexes, DB triggers, Alembic migration history |
+| 📐 | [`deliverables/HLD.md`](deliverables/HLD.md) | Architecture diagram, component responsibilities, full bid transaction sequence (15 steps), extension logic, state machine, real-time design, performance budget |
+| 🗄 | [`deliverables/SCHEMA.md`](deliverables/SCHEMA.md) | Mermaid ER diagram, all 8 tables (every column, type, constraint), indexes, DB triggers, Alembic migration history |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
+
+**Prerequisite:** Docker Desktop running.
 
 ```bash
 git clone https://github.com/DHYEYPATL/ANL-Auctionnightlive.git
@@ -21,143 +56,169 @@ cd ANL-Auctionnightlive
 docker compose up --build
 ```
 
-First startup automatically:
-1. Runs all 4 Alembic migrations
-2. Seeds demo accounts
-3. Starts API, workers, and frontend
+That single command:
+- Runs all 4 Alembic migrations
+- Seeds demo accounts
+- Starts API, Celery worker, Celery Beat, and the React frontend
 
-| Service | URL |
+| | URL |
 |---|---|
-| **Frontend** | http://localhost:3000 |
+| **App** | http://localhost:3000 |
 | **API** | http://localhost:8000 |
 | **API Docs** | http://localhost:8000/docs |
 | **Health** | http://localhost:8000/health |
 
 ---
 
-## 🔑 Demo Accounts
+## Demo Accounts
 
 | Role | Email | Password |
 |---|---|---|
-| Buyer | buyer@anl.dev | password123 |
-| Supplier 1 | supplier1@anl.dev | password123 |
-| Supplier 2 | supplier2@anl.dev | password123 |
-| Supplier 3 | supplier3@anl.dev | password123 |
+| Buyer | `buyer@anl.dev` | `password123` |
+| Supplier 1 | `supplier1@anl.dev` | `password123` |
+| Supplier 2 | `supplier2@anl.dev` | `password123` |
+| Supplier 3 | `supplier3@anl.dev` | `password123` |
+
+The login page has one-click buttons for all four — no typing required.
 
 ---
 
-## 🎯 End-to-End Walkthrough
+## Walkthrough
 
-1. **Login as Buyer** → http://localhost:3000 → click "Buyer" demo
-2. **Create Auction** → "New Auction" → 4-step wizard (Details → Schedule → Suppliers → Rules)
-3. **Publish** → open the auction detail → click "Publish Auction"
-4. **Login as Supplier 1** in a new tab → see the invited auction → submit a bid
-5. **Login as Supplier 2** in another tab → undercut → watch L1 change with animated rank shuffle
-6. **Extensions fire** automatically when bids land in the trigger window (last X minutes)
-7. **Activity feed** shows every event in real time — bid, rank change, extension, close
+> Full end-to-end in under two minutes.
+
+1. **Login as Buyer** → click the Buyer demo button
+2. **New Auction** → 4-step wizard: Details → Schedule → Suppliers → Rules → Create
+3. **Publish** → open the draft auction → click *Publish Auction*
+4. Open a second tab → login as **Supplier 1** → open the auction → submit a bid
+5. Open a third tab → login as **Supplier 2** → undercut → watch the rank table animate
+6. **Extension fires** automatically when a bid lands inside the trigger window (last X minutes)
+7. **Activity feed** updates in real time — every bid, rank change, extension, and close is logged
 
 ---
 
-## 🏗 Architecture
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 18 + TypeScript + Vite + Tailwind CSS + Framer Motion |
+| Backend | Python 3.11 + FastAPI + SQLAlchemy (async) |
+| Database | PostgreSQL 15 — sole source of truth |
+| Queue | Redis 7 + Celery (broker only) |
+| Migrations | Alembic |
+| Deployment | Docker Compose |
+
+---
+
+## Architecture
 
 ```
 Browser (React + TS)
-        │  3s poll · ETag/304 · server_now clock
-        ▼
-FastAPI (Python 3.11)  ←  JWT auth
-        │
-        ├── PostgreSQL 15  ← SELECT FOR UPDATE · DB clock · append-only
-        │
-        ├── Redis 7        ← Celery broker only
-        │
-        └── Celery Worker/Beat  ← reconcile auctions every 30s
+    │  3-second poll · ETag/304 · server_now clock anchor
+    ▼
+FastAPI  ←  JWT auth (Argon2id · 30s leeway)
+    │
+    ├── PostgreSQL 15
+    │     SELECT FOR UPDATE on every bid
+    │     DB clock (clock_timestamp()) for all decisions
+    │     Append-only bids + events (DB triggers)
+    │     SHA-256 hash chain on auction_events
+    │
+    ├── Redis 7  (Celery broker only — never authoritative)
+    │
+    └── Celery Worker + Beat
+          reconcile_auctions() every 30 s
+          FOR UPDATE SKIP LOCKED · ON CONFLICT DO NOTHING
 ```
 
-Full architecture diagram: [`deliverables/HLD.md`](deliverables/HLD.md)
+Full diagram and bid transaction walkthrough → [`deliverables/HLD.md`](deliverables/HLD.md)
 
 ---
 
-## 🗄 Database
+## Correctness Guarantees
 
-7 tables: `suppliers`, `users`, `rfqs`, `auction_configs`, `rfq_suppliers`, `bids`, `auction_events` + `bid_attempts`
-
-Full schema with all columns, constraints, indexes, and DB triggers: [`deliverables/SCHEMA.md`](deliverables/SCHEMA.md)
-
----
-
-## ✅ Key Correctness Properties
-
-| Property | Enforcement |
+| Property | How it's enforced |
 |---|---|
 | No bid accepted after close | `SELECT FOR UPDATE` + DB clock + DB trigger |
-| `current_close_at <= forced_close_at` always | DB `CHECK` constraint + application logic |
-| `total_amount = freight + origin + destination` | Computed in service, asserted post-insert |
+| `current_close_at ≤ forced_close_at` | `CHECK` constraint + application logic |
+| `total = freight + origin + destination` | Server-computed, asserted post-insert |
 | Each supplier's bids strictly decreasing | Checked inside the locked transaction |
-| Exactly one terminal event per RFQ | Partial unique index + `ON CONFLICT DO NOTHING` |
-| Bids and events append-only | DB triggers reject `UPDATE`/`DELETE` |
-| Idempotent retry returns original bid | `UNIQUE(rfq_id, supplier_id, idempotency_key)` |
+| One terminal event per RFQ | Partial unique index + `ON CONFLICT DO NOTHING` |
+| Bids and events immutable | DB triggers reject `UPDATE` / `DELETE` |
+| Network retry returns original bid | `UNIQUE(rfq_id, supplier_id, idempotency_key)` |
+| Monotonic decision clock | `GREATEST(clock_timestamp(), last_decision_at)` |
 
 ---
 
-## 🧪 Tests
+## Tests
 
 ```bash
 cd backend
-py -3.13 -m pytest tests/unit/ -v
-# 400+ unit tests, all passing
+py -3.11 -m pytest tests/unit/ -v
 ```
+
+400+ unit tests covering bid validation, extension triggers, state machine, ranking properties, money parsing, security projections, event hash chain, and all SRS edge cases 1–28.
 
 ---
 
-## 🔧 Utility Scripts
+## Utility Scripts
 
 ```bash
-# Verify event hash chain integrity (tamper evidence)
-cd backend && python scripts/verify_chain.py
+# Verify event hash chain integrity
+python scripts/verify_chain.py
 
 # Check all correctness invariants against live DB
-cd backend && python scripts/audit_invariants.py
+python scripts/audit_invariants.py
 
-# Load test: measure p50/p95/p99 bid latency
-cd backend && python scripts/load_test.py --host http://localhost:8000 --rfq <rfq_id>
+# Load test — measure p50/p95/p99 bid latency
+python scripts/load_test.py --host http://localhost:8000 --rfq <rfq_id>
 ```
 
 ---
 
-## 📁 Project Structure
+## Repository Layout
 
 ```
 ANL-Auctionnightlive/
+├── assets/                 ← Logo and static assets
 ├── deliverables/
 │   ├── HLD.md              ← Architecture + bid transaction flow
-│   └── SCHEMA.md           ← Full database schema
+│   └── SCHEMA.md           ← Mermaid ER diagram + full table definitions
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/         ← Routers
-│   │   ├── services/       ← Business logic
-│   │   ├── repositories/   ← DB access
-│   │   ├── db/models/      ← ORM models
-│   │   ├── schemas/        ← Pydantic (extra=forbid)
+│   │   ├── api/v1/         ← Routers (auth, rfqs, bids, standings, events)
+│   │   ├── services/       ← Business logic (bid, rfq, ranking, event, auction)
+│   │   ├── repositories/   ← DB access layer
+│   │   ├── db/models/      ← SQLAlchemy ORM models
+│   │   ├── schemas/        ← Pydantic schemas (extra=forbid on all inputs)
 │   │   └── workers/        ← Celery tasks
-│   ├── alembic/            ← 4 migrations
-│   ├── scripts/            ← verify_chain, audit_invariants, load_test
+│   ├── alembic/            ← 4 migration revisions
+│   ├── scripts/            ← verify_chain · audit_invariants · load_test
 │   └── tests/unit/         ← 400+ unit tests
 ├── frontend/
 │   └── src/
-│       ├── pages/          ← Login, Listing, Detail, Create (4-step wizard)
-│       ├── components/     ← BidForm (review step), StandingsTable, ActivityFeed, Countdown
-│       ├── api/            ← Axios + ETag-aware standings
-│       └── hooks/          ← useAuctionPolling (server clock, monotonic guard)
+│       ├── pages/          ← Login · Listing · Detail · Create (4-step)
+│       ├── components/     ← BidForm · StandingsTable · ActivityFeed · Countdown
+│       ├── api/            ← Axios client + ETag-aware standings
+│       └── hooks/          ← useAuctionPolling (server clock · monotonic guard)
 ├── docker-compose.yml
 └── .env.example
 ```
 
 ---
 
-## 🗺 P2 Roadmap
+## Roadmap
 
-- **SSE upgrade** — PostgreSQL LISTEN/NOTIFY push instead of 3s polling
+Things explicitly out of scope for this assignment but documented for completeness:
+
+- **SSE push** — replace 3-second polling with PostgreSQL `LISTEN/NOTIFY`
 - **Refresh tokens** — 15-min access + 8-hour rotating httpOnly cookie
-- **Read replicas** for polling (requires replication-lag alarm < 500ms)
-- **max_extensions** per auction config
-- **Audit log retention** — 7 years, signed export, pseudonymization
+- **Read replicas** — polling path only, with replication-lag guard
+- **`max_extensions` config** — cap extensions per auction
+- **Signed audit export** — 7-year retention, pseudonymization for erasure requests
+
+---
+
+<div align="center">
+  <sub>Built for the GoComet Full Stack Intern Assignment · Nov 2026</sub>
+</div>

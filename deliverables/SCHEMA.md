@@ -1,5 +1,139 @@
 # Database Schema Design — ANL (Auction Night Live)
 
+## Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    suppliers {
+        UUID id PK
+        VARCHAR display_name
+        VARCHAR legal_name
+        BOOLEAN is_active
+        TIMESTAMPTZ created_at
+    }
+
+    users {
+        UUID id PK
+        VARCHAR email UK
+        TEXT password_hash
+        VARCHAR display_name
+        VARCHAR role
+        UUID supplier_id FK
+        BOOLEAN is_active
+        TIMESTAMPTZ created_at
+    }
+
+    rfqs {
+        UUID id PK
+        UUID buyer_id FK
+        VARCHAR name
+        VARCHAR reference_id
+        CHAR currency
+        DATE service_date
+        TIMESTAMPTZ start_at
+        TIMESTAMPTZ scheduled_close_at
+        TIMESTAMPTZ current_close_at
+        TIMESTAMPTZ forced_close_at
+        VARCHAR status
+        TIMESTAMPTZ published_at
+        INTEGER version
+        INTEGER last_bid_seq
+        INTEGER last_event_seq
+        TIMESTAMPTZ last_decision_at
+        TIMESTAMPTZ created_at
+        TIMESTAMPTZ updated_at
+    }
+
+    auction_configs {
+        UUID id PK
+        UUID rfq_id FK UK
+        SMALLINT trigger_window_minutes
+        SMALLINT extension_duration_minutes
+        TEXT_ARRAY triggers
+        TIMESTAMPTZ created_at
+    }
+
+    rfq_suppliers {
+        UUID id PK
+        UUID rfq_id FK
+        UUID supplier_id FK
+        VARCHAR invitation_status
+        VARCHAR anon_label
+        UUID current_bid_id FK
+        NUMERIC current_total
+        INTEGER current_bid_seq
+        TIMESTAMPTZ invited_at
+    }
+
+    bids {
+        UUID id PK
+        UUID rfq_id FK
+        UUID supplier_id FK
+        UUID submitted_by_user_id FK
+        NUMERIC freight_charge
+        NUMERIC origin_charge
+        NUMERIC destination_charge
+        NUMERIC total_amount
+        INTEGER transit_time_days
+        DATE valid_until
+        VARCHAR idempotency_key
+        INTEGER bid_seq
+        VARCHAR request_hash
+        TIMESTAMPTZ close_at_before
+        TIMESTAMPTZ close_at_after
+        TIMESTAMPTZ received_at
+        INTEGER lock_wait_ms
+        TIMESTAMPTZ accepted_at
+    }
+
+    auction_events {
+        BIGSERIAL id PK
+        UUID rfq_id FK
+        UUID actor_user_id FK
+        UUID bid_id FK
+        VARCHAR event_type
+        TIMESTAMPTZ occurred_at
+        JSONB details
+        INTEGER event_seq
+        INTEGER rfq_version
+        VARCHAR prev_hash
+        VARCHAR event_hash
+    }
+
+    bid_attempts {
+        BIGSERIAL id PK
+        UUID rfq_id FK
+        UUID supplier_id FK
+        UUID user_id FK
+        UUID bid_id FK
+        VARCHAR idempotency_key
+        VARCHAR idempotency_key_prefix
+        VARCHAR outcome
+        TIMESTAMPTZ received_at
+        TIMESTAMPTZ decided_at
+        INTEGER lock_wait_ms
+        INTEGER total_ms
+        VARCHAR request_hash
+        JSONB details
+    }
+
+    suppliers ||--o{ users : "employs"
+    users ||--o{ rfqs : "buyer creates"
+    rfqs ||--|| auction_configs : "has config"
+    rfqs ||--o{ rfq_suppliers : "invites"
+    suppliers ||--o{ rfq_suppliers : "is invited via"
+    rfqs ||--o{ bids : "receives"
+    suppliers ||--o{ bids : "submits"
+    users ||--o{ bids : "submitted by"
+    rfqs ||--o{ auction_events : "logs"
+    bids ||--o{ auction_events : "triggers"
+    rfqs ||--o{ bid_attempts : "records"
+    bids ||--o{ bid_attempts : "linked to"
+    bids ||--o{ rfq_suppliers : "denormalized into"
+```
+
+---
+
 ## Conventions
 
 - **Primary keys:** UUID (`gen_random_uuid()`), except `auction_events` and `bid_attempts` which use `BIGSERIAL` for stable chronological cursors.
@@ -7,20 +141,6 @@
 - **Money:** `NUMERIC(14,2)` everywhere. Never `FLOAT`, `REAL`, or JavaScript `number` for authoritative values.
 - **Append-only:** `bids` and `auction_events` have DB triggers that reject `UPDATE` and `DELETE`.
 - **Migrations:** Alembic (`alembic upgrade head`). Never alter tables manually.
-
----
-
-## Entity Relationship Overview
-
-```
-suppliers ──< users (supplier_id FK, nullable for buyers)
-     │
-     └──< rfq_suppliers >── rfqs ──< auction_configs (1:1)
-                                │
-                                └──< bids ──< auction_events
-                                │
-                                └──< bid_attempts
-```
 
 ---
 

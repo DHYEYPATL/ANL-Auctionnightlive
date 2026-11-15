@@ -14,6 +14,7 @@ venv/
 dist/
 .coverage
 htmlcov/
+celerybeat-schedule
 
 # Node
 node_modules/
@@ -23,10 +24,13 @@ frontend/.vite/
 # Docker
 *.log
 
-# Celery
-celerybeat-schedule*
-*.pid
-
 # OS
 .DS_Store
 Thumbs.db
+
+# Kiro IDE internals
+.kiro/
+
+# Assignment docs — local only, not for repo
+*.pdf
+British*Hardening*.md
