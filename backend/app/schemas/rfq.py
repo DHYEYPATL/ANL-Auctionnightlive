@@ -2,19 +2,23 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from app.core.money import SUPPORTED_CURRENCIES
 
 
 VALID_TRIGGERS = {"BID_RECEIVED", "ANY_RANK_CHANGE", "L1_CHANGE"}
 
 
 class AuctionConfigSchema(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # HD-SEC-07
     trigger_window_minutes: int = Field(ge=1, description="Must be >= 1")
     extension_duration_minutes: int = Field(ge=1, description="Must be >= 1")
     triggers: list[Literal["BID_RECEIVED", "ANY_RANK_CHANGE", "L1_CHANGE"]] = Field(min_length=1)
 
 
 class CreateRfqRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")  # HD-SEC-07
     name: str = Field(min_length=1, max_length=250)
     reference_id: str = Field(min_length=1, max_length=100)
     currency: str = Field(min_length=3, max_length=3)
@@ -35,6 +39,7 @@ class CreateRfqRequest(BaseModel):
 
 
 class PatchRfqRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str | None = Field(default=None, min_length=1, max_length=250)
     reference_id: str | None = Field(default=None, min_length=1, max_length=100)
     service_date: date | None = None
@@ -61,6 +66,7 @@ class RfqResponse(BaseModel):
     status: str
     published_at: datetime | None
     created_at: datetime
+    version: int = 0
     auction_config: AuctionConfigResponse | None = None
     invited_supplier_ids: list[uuid.UUID] = []
     current_l1_total: str | None = None
@@ -68,4 +74,4 @@ class RfqResponse(BaseModel):
     accepted_bid_count: int = 0
     extension_count: int = 0
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
