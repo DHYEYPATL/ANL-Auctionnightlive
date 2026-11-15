@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.deps import get_current_user, get_idempotency_key, require_supplier
 from app.core.errors import bad_request, forbidden, not_found
 from app.db.models import Supplier, User
-from app.db.session import get_db
+from app.db.session import get_db, transaction_scope
 from app.repositories.bid_repository import BidRepository
 from app.repositories.rfq_repository import RfqRepository
 from app.schemas.bid import BidListItem, BidResponse, SubmitBidRequest
@@ -36,7 +36,7 @@ async def submit_bid(
 
     request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
 
-    async with db.begin():
+    async with transaction_scope(db):
         svc = BidService(db)
         result = await svc.submit(
             rfq_id, supplier.supplier_id, supplier.id, req,

@@ -155,11 +155,9 @@ class BidService:
         request_id: str,
     ) -> BidResponse:
         # ── Step 2: timeouts (HD-CON-06) ───────────────────────────────────────
-        await self.db.execute(text(
-            f"SET LOCAL lock_timeout = '{settings.LOCK_TIMEOUT_MS}ms'; "
-            f"SET LOCAL statement_timeout = '{settings.STATEMENT_TIMEOUT_MS}ms'; "
-            f"SET LOCAL idle_in_transaction_session_timeout = '{settings.IDLE_IN_TX_TIMEOUT_MS}ms'"
-        ))
+        await self.db.execute(text(f"SET LOCAL lock_timeout = '{settings.LOCK_TIMEOUT_MS}ms'"))
+        await self.db.execute(text(f"SET LOCAL statement_timeout = '{settings.STATEMENT_TIMEOUT_MS}ms'"))
+        await self.db.execute(text(f"SET LOCAL idle_in_transaction_session_timeout = '{settings.IDLE_IN_TX_TIMEOUT_MS}ms'"))
 
         # ── Step 3: SELECT FOR UPDATE (first statement, HD-CON-01) ─────────────
         lock_start = time.monotonic()

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.deps import get_current_user, require_buyer
 from app.core.errors import forbidden, not_found
 from app.db.models import Supplier, User
-from app.db.session import get_db
+from app.db.session import get_db, transaction_scope
 from app.repositories.bid_repository import BidRepository
 from app.repositories.event_repository import EventRepository
 from app.repositories.rfq_repository import RfqRepository
@@ -66,11 +66,10 @@ async def create_rfq(
     buyer: User = Depends(require_buyer),
     db: AsyncSession = Depends(get_db),
 ) -> RfqResponse:
-    async with db.begin():
+    async with transaction_scope(db):
         svc = RfqService(db)
         rfq = await svc.create(buyer.id, req)
-    async with db.begin():
-        return await _build_rfq_response(rfq, db)
+    return await _build_rfq_response(rfq, db)
 
 
 @router.patch("/rfqs/{rfq_id}")
@@ -80,11 +79,10 @@ async def patch_rfq(
     buyer: User = Depends(require_buyer),
     db: AsyncSession = Depends(get_db),
 ) -> RfqResponse:
-    async with db.begin():
+    async with transaction_scope(db):
         svc = RfqService(db)
         rfq = await svc.patch(rfq_id, buyer.id, req)
-    async with db.begin():
-        return await _build_rfq_response(rfq, db)
+    return await _build_rfq_response(rfq, db)
 
 
 @router.post("/rfqs/{rfq_id}/publish", status_code=200)
@@ -93,11 +91,10 @@ async def publish_rfq(
     buyer: User = Depends(require_buyer),
     db: AsyncSession = Depends(get_db),
 ) -> RfqResponse:
-    async with db.begin():
+    async with transaction_scope(db):
         svc = RfqService(db)
         rfq = await svc.publish(rfq_id, buyer.id)
-    async with db.begin():
-        return await _build_rfq_response(rfq, db)
+    return await _build_rfq_response(rfq, db)
 
 
 @router.post("/rfqs/{rfq_id}/cancel", status_code=200)
@@ -106,11 +103,10 @@ async def cancel_rfq(
     buyer: User = Depends(require_buyer),
     db: AsyncSession = Depends(get_db),
 ) -> RfqResponse:
-    async with db.begin():
+    async with transaction_scope(db):
         svc = RfqService(db)
         rfq = await svc.cancel(rfq_id, buyer.id)
-    async with db.begin():
-        return await _build_rfq_response(rfq, db)
+    return await _build_rfq_response(rfq, db)
 
 
 @router.get("/rfqs")
