@@ -1,3 +1,8 @@
+/**
+ * Auction detail page — HD-RT-01: countdown uses server clock anchor.
+ * HD-LIFE-11: "Final window" banner when current_close == forced_close.
+ * HD-SEC-01: form state preserved on session expiry.
+ */
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { rfqApi } from '../api/rfqs'
@@ -12,14 +17,13 @@ import { Button } from '../components/ui/Button'
 import { SkeletonRow } from '../components/ui/Skeleton'
 import { useAuctionPolling } from '../hooks/useAuctionPolling'
 import { useAuth } from '../hooks/useAuth'
-import { Clock, TrendingDown, Users, Zap, AlertTriangle } from 'lucide-react'
+import { Clock, TrendingDown, Users, Zap, AlertTriangle, Info } from 'lucide-react'
 
-function SummaryTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function SummaryTile({ label, value }: { label: string; value: string }) {
   return (
     <Card className="p-4">
       <p className="text-xs text-slate-500 mb-1">{label}</p>
       <p className="text-xl font-semibold tabular text-slate-200">{value}</p>
-      {sub && <p className="text-xs text-slate-600 mt-0.5">{sub}</p>}
     </Card>
   )
 }
@@ -32,38 +36,36 @@ export default function AuctionDetailPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
   const [publishing, setPublishing] = useState(false)
 
+  useEffect(() => {
+    if (!id) return
+    rfqApi.get(id).then(setRfq).finally(() => setRfqLoading(false))
+  }, [id])
+
+  const { standings, events, loading: pollLoading, serverNow } = useAuctionPolling(
+    id!,
+    rfq?.status ?? 'DRAFT'
+  )
+
+  // Refresh RFQ metadata on poll cycle for status/close changes
+  useEffect(() => {
+    if (!id || !rfq || !['ACTIVE', 'SCHEDULED'].includes(rfq.status)) return
+    const interval = setInterval(() => rfqApi.get(id).then(setRfq), 3000)
+    return () => clearInterval(interval)
+  }, [id, rfq?.status])
+
   const handlePublish = async () => {
     if (!id) return
     setPublishing(true)
     try {
       const updated = await rfqApi.publish(id)
       setRfq(updated)
-      setNotification({ type: 'success', msg: `Auction published — status: ${updated.status}` })
+      setNotification({ type: 'success', msg: `Published — status: ${updated.status}` })
     } catch {
       setNotification({ type: 'error', msg: 'Failed to publish auction.' })
     } finally {
       setPublishing(false)
     }
   }
-
-  useEffect(() => {
-    if (!id) return
-    rfqApi.get(id).then(setRfq).finally(() => setRfqLoading(false))
-  }, [id])
-
-  const { standings, events, loading: pollLoading } = useAuctionPolling(
-    id!,
-    rfq?.status ?? 'DRAFT'
-  )
-
-  // Refresh RFQ on poll cycle to pick up close time changes
-  useEffect(() => {
-    if (!id || !rfq || !['ACTIVE', 'SCHEDULED'].includes(rfq.status)) return
-    const interval = setInterval(() => {
-      rfqApi.get(id).then(setRfq)
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [id, rfq?.status])
 
   if (rfqLoading) {
     return (
@@ -85,9 +87,11 @@ export default function AuctionDetailPage() {
 
   const isBuyer = user?.role === 'BUYER'
   const isSupplier = user?.role === 'SUPPLIER'
-  const myStanding = isSupplier && standings?.standings.find(
-    s => s.supplier_label.startsWith('You')
-  )
+  const myStanding = isSupplier && standings?.standings.find(s => s.is_self)
+
+  // HD-LIFE-11: final window detection
+  const isFinalWindow = rfq.current_close_at === rfq.forced_close_at ||
+    new Date(rfq.current_close_at).getTime() >= new Date(rfq.forced_close_at).getTime()
 
   return (
     <div className="p-8 max-w-6xl">
@@ -99,7 +103,14 @@ export default function AuctionDetailPage() {
         </div>
       )}
 
-      {/* Notification */}
+      {/* HD-LIFE-11: Final window banner */}
+      {rfq.status === 'ACTIVE' && isFinalWindow && (
+        <div className="mb-4 flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-5 py-3">
+          <Info size={16} className="text-amber-400" />
+          <span className="text-sm text-amber-300">Final window — no further extensions possible</span>
+        </div>
+      )}
+
       {notification && (
         <div className={`mb-4 px-4 py-3 rounded-lg text-sm border ${
           notification.type === 'success'
@@ -122,22 +133,25 @@ export default function AuctionDetailPage() {
               <span className="text-xs text-slate-600">{rfq.currency}</span>
               <span className="text-xs text-slate-600">·</span>
               <span className="text-xs text-slate-600">Service: {rfq.service_date}</span>
+              {rfq.version > 0 && (
+                <span className="text-xs text-slate-700">v{rfq.version}</span>
+              )}
             </div>
             <h1 className="text-2xl font-semibold text-white tracking-tight">{rfq.name}</h1>
           </div>
-          {rfq.status === 'DRAFT' && isBuyer && (
-            <Button onClick={handlePublish} loading={publishing} variant="primary">
-              Publish Auction
-            </Button>
-          )}
-          {rfq.status === 'ACTIVE' && (
-            <div className="glass-card rounded-xl px-4 py-3 text-right flex-shrink-0">
-              <p className="text-xs text-slate-500 mb-1">Closes in</p>
-              <Countdown targetDate={rfq.current_close_at} urgent />
-            </div>
-          )}
+          <div className="flex items-center gap-3">
+            {rfq.status === 'DRAFT' && isBuyer && (
+              <Button onClick={handlePublish} loading={publishing} variant="primary">Publish Auction</Button>
+            )}
+            {rfq.status === 'ACTIVE' && (
+              <div className="glass-card rounded-xl px-4 py-3 text-right">
+                <p className="text-xs text-slate-500 mb-1">Closes in</p>
+                {/* HD-RT-01: use server clock anchor */}
+                <Countdown targetDate={rfq.current_close_at} urgent serverNow={serverNow} />
+              </div>
+            )}
+          </div>
         </div>
-
         <div className="flex gap-6 mt-4 text-xs text-slate-500">
           <span>Bid Close: <span className="text-slate-400">{new Date(rfq.current_close_at).toLocaleString()}</span></span>
           <span>Forced Close: <span className="text-slate-400">{new Date(rfq.forced_close_at).toLocaleString()}</span></span>
@@ -147,10 +161,7 @@ export default function AuctionDetailPage() {
 
       {/* Summary tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <SummaryTile
-          label="Current L1"
-          value={standings?.current_l1_total ? `${rfq.currency} ${standings.current_l1_total}` : 'No bids'}
-        />
+        <SummaryTile label="Current L1" value={standings?.current_l1_total ? `${rfq.currency} ${standings.current_l1_total}` : 'No bids'} />
         <SummaryTile label="Suppliers" value={String(rfq.participating_supplier_count)} />
         <SummaryTile label="Accepted Bids" value={String(rfq.accepted_bid_count)} />
         <SummaryTile label="Extensions" value={String(rfq.extension_count)} />
@@ -158,7 +169,6 @@ export default function AuctionDetailPage() {
 
       {/* Main grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Standings + bid form */}
         <div className="lg:col-span-2 space-y-6">
           <Card className="p-5">
             <h2 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
@@ -166,9 +176,7 @@ export default function AuctionDetailPage() {
               Current Standings
             </h2>
             {pollLoading && standings === null ? (
-              <div className="space-y-1">
-                {[1, 2, 3].map(i => <SkeletonRow key={i} />)}
-              </div>
+              <div className="space-y-1">{[1,2,3].map(i => <SkeletonRow key={i} />)}</div>
             ) : (
               <StandingsTable
                 standings={standings?.standings ?? []}
@@ -178,7 +186,6 @@ export default function AuctionDetailPage() {
             )}
           </Card>
 
-          {/* Bid form for suppliers */}
           {isSupplier && (
             <Card className="p-5">
               <h2 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
@@ -197,7 +204,6 @@ export default function AuctionDetailPage() {
             </Card>
           )}
 
-          {/* Auction config */}
           {rfq.auction_config && (
             <Card className="p-5">
               <h2 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
@@ -228,7 +234,6 @@ export default function AuctionDetailPage() {
           )}
         </div>
 
-        {/* Activity feed */}
         <div>
           <Card className="p-5 h-fit sticky top-8">
             <h2 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
