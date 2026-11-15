@@ -5,13 +5,16 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.core.money import parse_money
 
 
 class SubmitBidRequest(BaseModel):
-    """HD-BID-01/02/08: money as string-only, strict regex. HD-BID-04: transit/validity bounds."""
+    """HD-BID-01/02/08: money as string-only, strict regex. HD-BID-04: transit/validity bounds.
+    HD-SEC-07: extra=forbid rejects total_amount, supplier_id, rank, accepted_at."""
+
+    model_config = ConfigDict(extra="forbid")
 
     freight_charge: str
     origin_charge: str
