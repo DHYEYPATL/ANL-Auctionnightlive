@@ -1,7 +1,11 @@
+"""
+RFQ repository — HD-LIFE-01: effective_status derived from timestamps in list queries.
+HD-LIFE-02: get_by_id_for_update uses SELECT FOR UPDATE.
+"""
 import uuid
 from datetime import datetime
 
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import AuctionConfig, Rfq, RfqSupplier
@@ -21,6 +25,7 @@ class RfqRepository:
         return result.scalar_one_or_none()
 
     async def get_by_id_for_update(self, rfq_id: uuid.UUID) -> Rfq | None:
+        """HD-LIFE-02 / HD-CON-01: SELECT FOR UPDATE — first statement in transaction."""
         result = await self.db.execute(
             select(Rfq).where(Rfq.id == rfq_id).with_for_update()
         )
@@ -28,7 +33,9 @@ class RfqRepository:
 
     async def list_for_buyer(self, buyer_id: uuid.UUID) -> list[Rfq]:
         result = await self.db.execute(
-            select(Rfq).where(Rfq.buyer_id == buyer_id).order_by(Rfq.created_at.desc())
+            select(Rfq)
+            .where(Rfq.buyer_id == buyer_id)
+            .order_by(Rfq.created_at.desc())
         )
         return list(result.scalars().all())
 
@@ -83,3 +90,12 @@ class RfqRepository:
         if published_at is not None:
             values["published_at"] = published_at
         await self.db.execute(update(Rfq).where(Rfq.id == rfq_id).values(**values))
+
+    async def get_anon_label(self, rfq_id: uuid.UUID, supplier_id: uuid.UUID) -> str | None:
+        """Get stored anonymous label for a supplier — HD-SEC-05."""
+        result = await self.db.execute(
+            text("SELECT anon_label FROM rfq_suppliers WHERE rfq_id = :rfq AND supplier_id = :sup"),
+            {"rfq": str(rfq_id), "sup": str(supplier_id)},
+        )
+        row = result.one_or_none()
+        return row[0] if row else None
