@@ -16,25 +16,26 @@ const eventConfig = {
 function formatDetails(event: AuctionEvent): React.ReactNode {
   const d = event.details
   if (event.event_type === 'EXTENSION_APPLIED') {
+    const matchedReasons = Array.isArray(d.matched_reasons) ? (d.matched_reasons as string[]) : []
     return (
       <span className="text-xs text-slate-500">
         {new Date(d.previous_close as string).toLocaleTimeString()} →{' '}
         <span className="text-extension">{new Date(d.new_close as string).toLocaleTimeString()}</span>
-        {d.matched_reasons && (
+        {matchedReasons.length > 0 && (
           <span className="ml-2 text-slate-600">
-            ({(d.matched_reasons as string[]).join(', ')})
+            ({matchedReasons.join(', ')})
           </span>
         )}
       </span>
     )
   }
   if (event.event_type === 'BID_SUBMITTED') {
-    return <span className="text-xs text-slate-500">Total: {d.total as string}</span>
+    return <span className="text-xs text-slate-500">Total: {String(d.total ?? '')}</span>
   }
   if (event.event_type === 'RANK_CHANGED') {
     return (
       <span className="text-xs text-slate-500">
-        {d.from_rank ? `L${d.from_rank}` : '—'} → <span className="text-rank">L{d.to_rank}</span>
+        {d.from_rank ? `L${String(d.from_rank)}` : '—'} → <span className="text-rank">L{String(d.to_rank ?? '')}</span>
       </span>
     )
   }

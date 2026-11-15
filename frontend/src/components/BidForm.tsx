@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import { Button } from './ui/Button'
 import type { RfqStatus } from '../types/api'
 import { bidsApi } from '../api/bids'
-import { v4 as uuidv4 } from 'uuid'
 import Decimal from 'decimal.js'
 
 // Simple uuid fallback using crypto
