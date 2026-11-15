@@ -8,6 +8,7 @@ import { StandingsTable } from '../components/StandingsTable'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { BidForm } from '../components/BidForm'
 import { Card } from '../components/ui/Card'
+import { Button } from '../components/ui/Button'
 import { SkeletonRow } from '../components/ui/Skeleton'
 import { useAuctionPolling } from '../hooks/useAuctionPolling'
 import { useAuth } from '../hooks/useAuth'
@@ -29,6 +30,21 @@ export default function AuctionDetailPage() {
   const [rfq, setRfq] = useState<Rfq | null>(null)
   const [rfqLoading, setRfqLoading] = useState(true)
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [publishing, setPublishing] = useState(false)
+
+  const handlePublish = async () => {
+    if (!id) return
+    setPublishing(true)
+    try {
+      const updated = await rfqApi.publish(id)
+      setRfq(updated)
+      setNotification({ type: 'success', msg: `Auction published — status: ${updated.status}` })
+    } catch {
+      setNotification({ type: 'error', msg: 'Failed to publish auction.' })
+    } finally {
+      setPublishing(false)
+    }
+  }
 
   useEffect(() => {
     if (!id) return
@@ -109,6 +125,11 @@ export default function AuctionDetailPage() {
             </div>
             <h1 className="text-2xl font-semibold text-white tracking-tight">{rfq.name}</h1>
           </div>
+          {rfq.status === 'DRAFT' && isBuyer && (
+            <Button onClick={handlePublish} loading={publishing} variant="primary">
+              Publish Auction
+            </Button>
+          )}
           {rfq.status === 'ACTIVE' && (
             <div className="glass-card rounded-xl px-4 py-3 text-right flex-shrink-0">
               <p className="text-xs text-slate-500 mb-1">Closes in</p>
