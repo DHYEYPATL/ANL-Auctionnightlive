@@ -1,10 +1,5 @@
-/**
- * Auction detail page — HD-RT-01: countdown uses server clock anchor.
- * HD-LIFE-11: "Final window" banner when current_close == forced_close.
- * HD-SEC-01: form state preserved on session expiry.
- */
 import React, { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { rfqApi } from '../api/rfqs'
 import type { Rfq } from '../types/api'
 import { StatusBadge } from '../components/ui/Badge'
@@ -12,236 +7,198 @@ import { Countdown } from '../components/Countdown'
 import { StandingsTable } from '../components/StandingsTable'
 import { ActivityFeed } from '../components/ActivityFeed'
 import { BidForm } from '../components/BidForm'
-import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
-import { SkeletonRow } from '../components/ui/Skeleton'
 import { useAuctionPolling } from '../hooks/useAuctionPolling'
 import { useAuth } from '../hooks/useAuth'
-import { Clock, TrendingDown, Users, Zap, AlertTriangle, Info } from 'lucide-react'
 
-function SummaryTile({ label, value }: { label: string; value: string }) {
+function Tile({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
   return (
-    <Card className="p-4">
-      <p className="text-xs text-slate-500 mb-1">{label}</p>
-      <p className="text-xl font-semibold tabular text-slate-200">{value}</p>
-    </Card>
+    <div className="glass rounded-2xl p-4">
+      <p className="text-[10px] uppercase tracking-widest text-slate-700 mb-1 font-medium">{label}</p>
+      <p className={`text-lg font-bold tabular ${accent ? 'text-grad-accent' : 'text-slate-200'}`}>{value}</p>
+    </div>
   )
 }
 
 export default function AuctionDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [rfq, setRfq] = useState<Rfq | null>(null)
-  const [rfqLoading, setRfqLoading] = useState(true)
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notice, setNotice] = useState<{ ok: boolean; msg: string } | null>(null)
   const [publishing, setPublishing] = useState(false)
 
   useEffect(() => {
     if (!id) return
-    rfqApi.get(id).then(setRfq).finally(() => setRfqLoading(false))
+    rfqApi.get(id).then(setRfq).finally(() => setLoading(false))
   }, [id])
 
-  const { standings, events, loading: pollLoading, serverNow } = useAuctionPolling(
-    id!,
-    rfq?.status ?? 'DRAFT'
-  )
+  const { standings, events, serverNow } = useAuctionPolling(id!, rfq?.status ?? 'DRAFT')
 
-  // Refresh RFQ metadata on poll cycle for status/close changes
+  // Sync rfq changes from poll
   useEffect(() => {
-    if (!id || !rfq || !['ACTIVE', 'SCHEDULED'].includes(rfq.status)) return
-    const interval = setInterval(() => rfqApi.get(id).then(setRfq), 3000)
-    return () => clearInterval(interval)
+    if (!id || !rfq || !['ACTIVE','SCHEDULED'].includes(rfq.status)) return
+    const t = setInterval(() => rfqApi.get(id).then(setRfq), 3000)
+    return () => clearInterval(t)
   }, [id, rfq?.status])
 
   const handlePublish = async () => {
     if (!id) return
     setPublishing(true)
     try {
-      const updated = await rfqApi.publish(id)
-      setRfq(updated)
-      setNotification({ type: 'success', msg: `Published — status: ${updated.status}` })
-    } catch {
-      setNotification({ type: 'error', msg: 'Failed to publish auction.' })
-    } finally {
-      setPublishing(false)
-    }
+      const r = await rfqApi.publish(id)
+      setRfq(r)
+      setNotice({ ok: true, msg: `Auction published — ${r.status}` })
+    } catch (e: unknown) {
+      const msg = (e as {response?:{data?:{error?:{message?:string}}}})?.response?.data?.error?.message ?? 'Failed to publish'
+      setNotice({ ok: false, msg })
+    } finally { setPublishing(false) }
   }
 
-  if (rfqLoading) {
-    return (
-      <div className="p-8 space-y-4">
-        <div className="h-8 w-64 rounded bg-white/[0.06] animate-pulse" />
-        <div className="h-4 w-48 rounded bg-white/[0.06] animate-pulse" />
-      </div>
-    )
-  }
+  if (loading) return (
+    <div className="p-7 space-y-4">
+      {[1,2,3].map(i => <div key={i} className="h-14 glass rounded-2xl animate-pulse" />)}
+    </div>
+  )
 
-  if (!rfq) {
-    return (
-      <div className="p-8 flex items-center gap-3 text-slate-400">
-        <AlertTriangle size={20} />
-        Auction not found or access denied.
-      </div>
-    )
-  }
+  if (!rfq) return (
+    <div className="p-7 flex items-center gap-3 text-slate-500">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Auction not found or access denied.
+    </div>
+  )
 
   const isBuyer = user?.role === 'BUYER'
   const isSupplier = user?.role === 'SUPPLIER'
-  const myStanding = isSupplier && standings?.standings.find(s => s.is_self)
-
-  // HD-LIFE-11: final window detection
-  const isFinalWindow = rfq.current_close_at === rfq.forced_close_at ||
-    new Date(rfq.current_close_at).getTime() >= new Date(rfq.forced_close_at).getTime()
+  const myRow = isSupplier ? standings?.standings.find(s => s.is_self) : null
+  const isFinal = new Date(rfq.current_close_at).getTime() >= new Date(rfq.forced_close_at).getTime()
 
   return (
-    <div className="p-8 max-w-6xl">
-      {/* Force close banner */}
+    <div className="p-7 max-w-6xl animate-fade-up">
+      {/* Banners */}
       {rfq.status === 'FORCE_CLOSED' && (
-        <div className="mb-6 flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-5 py-3">
-          <AlertTriangle size={18} className="text-red-400" />
-          <span className="text-sm text-red-300 font-medium">Forced close reached — auction is permanently closed</span>
+        <div className="mb-5 flex items-center gap-3 rounded-2xl px-5 py-3 bg-red-500/[0.08] border border-red-500/20">
+          <span className="text-red-400">⬛</span>
+          <span className="text-sm text-red-300 font-medium">Hard stop reached — auction permanently closed</span>
         </div>
       )}
-
-      {/* HD-LIFE-11: Final window banner */}
-      {rfq.status === 'ACTIVE' && isFinalWindow && (
-        <div className="mb-4 flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-5 py-3">
-          <Info size={16} className="text-amber-400" />
+      {rfq.status === 'ACTIVE' && isFinal && (
+        <div className="mb-4 flex items-center gap-3 rounded-2xl px-5 py-3 bg-amber-500/[0.07] border border-amber-500/20">
+          <span className="text-amber-400 text-sm">⚠</span>
           <span className="text-sm text-amber-300">Final window — no further extensions possible</span>
         </div>
       )}
-
-      {notification && (
-        <div className={`mb-4 px-4 py-3 rounded-lg text-sm border ${
-          notification.type === 'success'
-            ? 'bg-extension/10 border-extension/30 text-extension'
-            : 'bg-red-500/10 border-red-500/30 text-red-300'
-        }`}>
-          {notification.msg}
-          <button onClick={() => setNotification(null)} className="ml-3 opacity-60 hover:opacity-100">×</button>
+      {notice && (
+        <div className={`mb-4 flex items-center justify-between rounded-2xl px-5 py-3 text-sm border ${notice.ok ? 'bg-green-500/[0.07] border-green-500/20 text-green-300' : 'bg-red-500/[0.07] border-red-500/20 text-red-300'}`}>
+          {notice.msg}
+          <button onClick={() => setNotice(null)} className="opacity-50 hover:opacity-100 ml-4">×</button>
         </div>
       )}
 
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <StatusBadge status={rfq.status} />
-              <span className="text-xs text-slate-600">{rfq.reference_id}</span>
-              <span className="text-xs text-slate-600">·</span>
-              <span className="text-xs text-slate-600">{rfq.currency}</span>
-              <span className="text-xs text-slate-600">·</span>
-              <span className="text-xs text-slate-600">Service: {rfq.service_date}</span>
-              {rfq.version > 0 && (
-                <span className="text-xs text-slate-700">v{rfq.version}</span>
-              )}
-            </div>
-            <h1 className="text-2xl font-semibold text-white tracking-tight">{rfq.name}</h1>
+      <div className="flex items-start justify-between gap-6 mb-6 flex-wrap">
+        <div>
+          <div className="flex items-center gap-2.5 mb-2">
+            <StatusBadge status={rfq.status} />
+            <span className="text-xs text-slate-700 font-mono">{rfq.reference_id}</span>
+            <span className="text-xs text-slate-700">{rfq.currency}</span>
+            <span className="text-xs text-slate-700">· Service {rfq.service_date}</span>
+            {rfq.version > 0 && <span className="text-[10px] text-slate-800 font-mono">v{rfq.version}</span>}
           </div>
-          <div className="flex items-center gap-3">
-            {rfq.status === 'DRAFT' && isBuyer && (
-              <Button onClick={handlePublish} loading={publishing} variant="primary">Publish Auction</Button>
-            )}
-            {rfq.status === 'ACTIVE' && (
-              <div className="glass-card rounded-xl px-4 py-3 text-right">
-                <p className="text-xs text-slate-500 mb-1">Closes in</p>
-                {/* HD-RT-01: use server clock anchor */}
-                <Countdown targetDate={rfq.current_close_at} urgent serverNow={serverNow} />
-              </div>
-            )}
+          <h1 className="text-2xl font-bold text-grad tracking-tight">{rfq.name}</h1>
+          <div className="flex gap-5 mt-2 text-xs text-slate-700">
+            <span>Close: <span className="text-slate-500">{new Date(rfq.current_close_at).toLocaleString()}</span></span>
+            <span>Hard stop: <span className="text-slate-500">{new Date(rfq.forced_close_at).toLocaleString()}</span></span>
           </div>
         </div>
-        <div className="flex gap-6 mt-4 text-xs text-slate-500">
-          <span>Bid Close: <span className="text-slate-400">{new Date(rfq.current_close_at).toLocaleString()}</span></span>
-          <span>Forced Close: <span className="text-slate-400">{new Date(rfq.forced_close_at).toLocaleString()}</span></span>
-          {rfq.published_at && <span>Published: <span className="text-slate-400">{new Date(rfq.published_at).toLocaleString()}</span></span>}
+        <div className="flex items-center gap-3">
+          {rfq.status === 'DRAFT' && isBuyer && (
+            <button onClick={handlePublish} disabled={publishing}
+              className="btn-primary flex items-center gap-2">
+              {publishing ? '…' : <>Publish Auction <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg></>}
+            </button>
+          )}
+          {rfq.status === 'ACTIVE' && (
+            <div className="glass rounded-2xl px-5 py-3 text-right">
+              <p className="text-[10px] uppercase tracking-widest text-slate-700 mb-1">Closes in</p>
+              <Countdown targetDate={rfq.current_close_at} urgent serverNow={serverNow} />
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Summary tiles */}
+      {/* Tiles */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <SummaryTile label="Current L1" value={standings?.current_l1_total ? `${rfq.currency} ${standings.current_l1_total}` : 'No bids'} />
-        <SummaryTile label="Suppliers" value={String(rfq.participating_supplier_count)} />
-        <SummaryTile label="Accepted Bids" value={String(rfq.accepted_bid_count)} />
-        <SummaryTile label="Extensions" value={String(rfq.extension_count)} />
+        <Tile label="Current L1" value={standings?.current_l1_total ? `${rfq.currency} ${standings.current_l1_total}` : 'No bids'} accent={!!standings?.current_l1_total} />
+        <Tile label="Suppliers" value={String(rfq.participating_supplier_count)} />
+        <Tile label="Accepted Bids" value={String(rfq.accepted_bid_count)} />
+        <Tile label="Extensions" value={String(rfq.extension_count)} />
       </div>
 
       {/* Main grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card className="p-5">
-            <h2 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-              <TrendingDown size={15} className="text-accent" />
-              Current Standings
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 space-y-5">
+          {/* Standings */}
+          <div className="glass rounded-3xl p-5">
+            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+              Live Standings
             </h2>
-            {pollLoading && standings === null ? (
-              <div className="space-y-1">{[1,2,3].map(i => <SkeletonRow key={i} />)}</div>
-            ) : (
-              <StandingsTable
-                standings={standings?.standings ?? []}
-                currency={rfq.currency}
-                isBuyer={isBuyer}
-              />
-            )}
-          </Card>
+            <StandingsTable standings={standings?.standings ?? []} currency={rfq.currency} isBuyer={isBuyer} />
+          </div>
 
+          {/* Bid form */}
           {isSupplier && (
-            <Card className="p-5">
-              <h2 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-                <Zap size={15} className="text-accent" />
+            <div className="glass rounded-3xl p-5">
+              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 Submit Bid
               </h2>
               <BidForm
-                rfqId={rfq.id}
-                currency={rfq.currency}
-                status={rfq.status}
-                previousTotal={myStanding ? myStanding.total_amount : null}
+                rfqId={rfq.id} currency={rfq.currency} status={rfq.status}
+                previousTotal={myRow?.total_amount ?? null}
                 serviceDate={rfq.service_date}
-                onSuccess={msg => setNotification({ type: 'success', msg })}
-                onError={msg => setNotification({ type: 'error', msg })}
+                onSuccess={msg => setNotice({ ok: true, msg })}
+                onError={msg => setNotice({ ok: false, msg })}
               />
-            </Card>
+            </div>
           )}
 
+          {/* Config */}
           {rfq.auction_config && (
-            <Card className="p-5">
-              <h2 className="text-sm font-semibold text-slate-300 mb-3 flex items-center gap-2">
-                <Clock size={15} className="text-accent" />
-                Auction Configuration
-              </h2>
+            <div className="glass rounded-3xl p-5">
+              <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4">Auction Rules</h2>
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Trigger Window</p>
-                  <p className="text-slate-300 font-medium">{rfq.auction_config.trigger_window_minutes}m</p>
+                  <p className="text-[10px] text-slate-700 mb-1 uppercase tracking-wide">Window X</p>
+                  <p className="font-semibold text-slate-300">{rfq.auction_config.trigger_window_minutes}m</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Extension Duration</p>
-                  <p className="text-slate-300 font-medium">{rfq.auction_config.extension_duration_minutes}m</p>
+                  <p className="text-[10px] text-slate-700 mb-1 uppercase tracking-wide">Extension Y</p>
+                  <p className="font-semibold text-slate-300">{rfq.auction_config.extension_duration_minutes}m</p>
                 </div>
                 <div>
-                  <p className="text-xs text-slate-500 mb-1">Triggers</p>
+                  <p className="text-[10px] text-slate-700 mb-1 uppercase tracking-wide">Triggers</p>
                   <div className="flex flex-wrap gap-1">
                     {rfq.auction_config.triggers.map(t => (
-                      <span key={t} className="text-xs bg-accent/10 text-accent border border-accent/20 rounded px-1.5 py-0.5">
-                        {t.replace(/_/g, ' ')}
+                      <span key={t} className="text-[10px] bg-accent/10 text-accent-light border border-accent/20 rounded px-1.5 py-0.5">
+                        {t === 'BID_RECEIVED' ? 'Bid' : t === 'ANY_RANK_CHANGE' ? 'Rank' : 'L1'}
                       </span>
                     ))}
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           )}
         </div>
 
-        <div>
-          <Card className="p-5 h-fit sticky top-8">
-            <h2 className="text-sm font-semibold text-slate-300 mb-4 flex items-center gap-2">
-              <Users size={15} className="text-accent" />
-              Activity
-            </h2>
-            <ActivityFeed events={events} />
-          </Card>
+        {/* Activity */}
+        <div className="glass rounded-3xl p-5 h-fit sticky top-6">
+          <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Activity
+          </h2>
+          <ActivityFeed events={events} />
         </div>
       </div>
     </div>

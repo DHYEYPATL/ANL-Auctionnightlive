@@ -1,88 +1,53 @@
 import type { Config } from 'tailwindcss'
 
-const config: Config = {
+export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        // Rich dark palette
-        base: {
-          950: '#07070d',
-          900: '#0a0a0f',
-          800: '#111118',
-          700: '#18181f',
-          600: '#1e1e28',
-          500: '#25252f',
-        },
-        glass: {
-          border: 'rgba(255,255,255,0.08)',
-          bg: 'rgba(255,255,255,0.04)',
-        },
-        accent: {
-          DEFAULT: '#6366f1',
-          hover: '#818cf8',
-          glow: 'rgba(99,102,241,0.3)',
-          muted: 'rgba(99,102,241,0.15)',
-        },
+        base: { 950:'#07070d', 900:'#0d0d14', 800:'#12121a', 700:'#17171f', 600:'#1c1c26', 500:'#22222d' },
+        accent: { DEFAULT:'#6366f1', light:'#818cf8', dark:'#4f46e5', muted:'rgba(99,102,241,0.12)', glow:'rgba(99,102,241,0.25)' },
         status: {
-          active: '#10b981',
-          'active-muted': 'rgba(16,185,129,0.15)',
-          scheduled: '#3b82f6',
-          'scheduled-muted': 'rgba(59,130,246,0.15)',
-          closed: '#64748b',
-          'closed-muted': 'rgba(100,116,139,0.15)',
-          'force-closed': '#ef4444',
-          'force-closed-muted': 'rgba(239,68,68,0.15)',
-          draft: '#71717a',
-          cancelled: '#57534e',
+          active:'#10b981', 'active-m':'rgba(16,185,129,0.12)',
+          scheduled:'#3b82f6', 'scheduled-m':'rgba(59,130,246,0.12)',
+          closed:'#475569', 'closed-m':'rgba(71,85,105,0.12)',
+          'force-closed':'#ef4444', 'force-m':'rgba(239,68,68,0.12)',
+          draft:'#6b7280', cancelled:'#44403c',
         },
-        bid: '#3b82f6',
-        rank: '#f59e0b',
-        extension: '#10b981',
+        event: { bid:'#3b82f6', rank:'#f59e0b', ext:'#10b981', close:'#64748b', pub:'#8b5cf6' },
       },
       fontFamily: {
-        sans: ['Inter var', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'monospace'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
       },
-      backdropBlur: {
-        xs: '2px',
-        sm: '4px',
-        md: '8px',
-        lg: '16px',
-        xl: '24px',
-      },
+      borderRadius: { '2xl':'1rem', '3xl':'1.25rem', '4xl':'2rem' },
       animation: {
-        'fade-in': 'fadeIn 0.3s ease-out',
-        'slide-up': 'slideUp 0.4s ease-out',
-        'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
-        'digit-flip': 'digitFlip 0.3s ease-in-out',
-        'rank-move': 'rankMove 0.5s ease-out',
+        'fade-up':     'fadeUp 0.4s ease-out',
+        'fade-in':     'fadeIn 0.3s ease-out',
+        'pulse-soft':  'pulseSoft 3s ease-in-out infinite',
+        'glow-ring':   'glowRing 2s ease-in-out infinite',
+        'float':       'float 6s ease-in-out infinite',
+        'digit':       'digit 0.25s ease-out',
+        'slide-right': 'slideRight 0.3s ease-out',
+        'rank-flash':  'rankFlash 0.6s ease-out',
       },
       keyframes: {
-        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-        slideUp: { '0%': { opacity: '0', transform: 'translateY(16px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
-        pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 8px rgba(99,102,241,0.3)' },
-          '50%': { boxShadow: '0 0 24px rgba(99,102,241,0.6)' },
-        },
-        digitFlip: {
-          '0%': { transform: 'rotateX(-90deg)', opacity: '0' },
-          '100%': { transform: 'rotateX(0)', opacity: '1' },
-        },
-        rankMove: {
-          '0%': { background: 'rgba(99,102,241,0.2)' },
-          '100%': { background: 'transparent' },
-        },
+        fadeUp:    { '0%':{ opacity:'0', transform:'translateY(12px)' }, '100%':{ opacity:'1', transform:'translateY(0)' } },
+        fadeIn:    { '0%':{ opacity:'0' }, '100%':{ opacity:'1' } },
+        pulseSoft: { '0%,100%':{ opacity:'1' }, '50%':{ opacity:'0.5' } },
+        glowRing:  { '0%,100%':{ boxShadow:'0 0 8px rgba(99,102,241,0.3)' }, '50%':{ boxShadow:'0 0 24px rgba(99,102,241,0.6)' } },
+        float:     { '0%,100%':{ transform:'translateY(0)' }, '50%':{ transform:'translateY(-8px)' } },
+        digit:     { '0%':{ transform:'translateY(-4px)', opacity:'0' }, '100%':{ transform:'translateY(0)', opacity:'1' } },
+        slideRight:{ '0%':{ transform:'translateX(-8px)', opacity:'0' }, '100%':{ transform:'translateX(0)', opacity:'1' } },
+        rankFlash: { '0%':{ background:'rgba(99,102,241,0.2)' }, '100%':{ background:'transparent' } },
       },
       boxShadow: {
-        glass: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06)',
-        'glass-lg': '0 8px 48px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)',
-        glow: '0 0 24px rgba(99,102,241,0.4)',
-        'glow-sm': '0 0 8px rgba(99,102,241,0.3)',
+        glass: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
+        glow:  '0 0 32px rgba(99,102,241,0.4)',
+        'glow-sm': '0 0 12px rgba(99,102,241,0.3)',
+        'inner-top': 'inset 0 1px 0 rgba(255,255,255,0.08)',
       },
     },
   },
   plugins: [],
-}
-
-export default config
+} satisfies Config

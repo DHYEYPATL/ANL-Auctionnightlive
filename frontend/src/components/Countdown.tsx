@@ -1,70 +1,44 @@
-/**
- * Countdown — HD-RT-01: uses performance.now() anchored to server_now,
- * not Date.now(). Display-only — never used to accept or reject bids.
- */
 import React, { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 
-interface CountdownProps {
-  targetDate: string
-  label?: string
-  urgent?: boolean
-  serverNow?: () => number  // optional: estimated server time fn from useAuctionPolling
-}
+interface Props { targetDate: string; label?: string; urgent?: boolean; serverNow?: () => number }
 
-function pad(n: number) {
-  return String(Math.max(0, n)).padStart(2, '0')
-}
+function pad(n: number) { return String(Math.max(0, n)).padStart(2, '0') }
 
-export function Countdown({ targetDate, label, urgent, serverNow }: CountdownProps) {
-  const targetMs = new Date(targetDate).getTime()
-
-  const getRemaining = () => {
-    const now = serverNow ? serverNow() : Date.now()
-    return Math.max(0, targetMs - now)
-  }
-
-  const [remaining, setRemaining] = useState(() => getRemaining())
+export function Countdown({ targetDate, label, urgent, serverNow }: Props) {
+  const target = new Date(targetDate).getTime()
+  const getR = () => Math.max(0, target - (serverNow ? serverNow() : Date.now()))
+  const [r, setR] = useState(getR)
 
   useEffect(() => {
-    const id = setInterval(() => setRemaining(getRemaining()), 500)
+    const id = setInterval(() => setR(getR()), 500)
     return () => clearInterval(id)
   }, [targetDate, serverNow])
 
-  const totalSecs = Math.floor(remaining / 1000)
-  const h = Math.floor(totalSecs / 3600)
-  const m = Math.floor((totalSecs % 3600) / 60)
-  const s = totalSecs % 60
-  const isUrgent = urgent || remaining < 5 * 60 * 1000
+  const s = Math.floor(r / 1000)
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60
+  const hot = urgent || r < 5 * 60 * 1000
 
-  if (remaining === 0) {
-    return (
-      <div className="text-status-closed text-sm tabular">
-        {label && <span className="text-slate-500 mr-2 text-xs">{label}</span>}
-        <span>Closing…</span>
-      </div>
-    )
-  }
+  if (r === 0) return (
+    <span className="text-status-closed text-xs font-medium">
+      {label && <span className="text-slate-700 mr-1.5 text-[10px]">{label}</span>}Closing…
+    </span>
+  )
 
   return (
-    <div className="inline-flex items-center gap-1.5">
-      {label && <span className="text-slate-500 text-xs mr-1">{label}</span>}
-      <div
-        className={clsx(
-          'flex items-center gap-1 tabular font-mono text-sm font-semibold',
-          isUrgent ? 'text-status-force-closed' : 'text-slate-200'
-        )}
-      >
-        {h > 0 && (
-          <>
-            <span className="bg-base-700 px-1.5 py-0.5 rounded">{pad(h)}</span>
-            <span className="text-slate-600">:</span>
-          </>
-        )}
-        <span className="bg-base-700 px-1.5 py-0.5 rounded">{pad(m)}</span>
-        <span className="text-slate-600">:</span>
-        <span className={clsx('bg-base-700 px-1.5 py-0.5 rounded', isUrgent && 'animate-pulse')}>{pad(s)}</span>
+    <div className="inline-flex items-center gap-1">
+      {label && <span className="text-[10px] text-slate-700 mr-1">{label}</span>}
+      <div className={clsx('flex items-center gap-0.5 font-mono text-sm font-bold tabular', hot ? 'text-status-force-closed' : 'text-slate-200')}>
+        {h > 0 && <><Digit v={pad(h)} /><Sep /></>}
+        <Digit v={pad(m)} /><Sep /><Digit v={pad(sec)} hot={hot} />
       </div>
     </div>
   )
 }
+
+function Digit({ v, hot }: { v: string; hot?: boolean }) {
+  return (
+    <span className={clsx('px-1.5 py-0.5 rounded-lg text-xs', hot ? 'bg-red-500/15' : 'bg-white/[0.06]')}>{v}</span>
+  )
+}
+function Sep() { return <span className="text-slate-700 text-xs">:</span> }
