@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { rfqApi } from '../api/rfqs'
-import client from '../api/client'
+import { suppliersApi, type SupplierItem } from '../api/suppliers'
 import { Check, ChevronRight, Shield, Clock, Users, FileText, ArrowLeft } from 'lucide-react'
-
-interface Supplier { id: string; display_name: string }
 
 export default function CreateRfqPage() {
   const navigate = useNavigate()
-  const [suppliers, setSuppliers] = useState<Supplier[]>([])
+  const [suppliers, setSuppliers] = useState<SupplierItem[]>([])
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [step, setStep] = useState(1)
@@ -22,7 +20,7 @@ export default function CreateRfqPage() {
   })
 
   useEffect(() => {
-    client.get('/api/v1/suppliers').then(r => setSuppliers(r.data)).catch(() => {})
+    suppliersApi.list().then(setSuppliers).catch(console.error)
   }, [])
 
   const set = (k: string, v: unknown) => {
@@ -287,7 +285,7 @@ export default function CreateRfqPage() {
                 <p>No registered supplier accounts detected in system.</p>
                 <button
                   type="button"
-                  onClick={() => client.get('/api/v1/suppliers').then(r => setSuppliers(r.data))}
+                  onClick={() => suppliersApi.list().then(setSuppliers).catch(console.error)}
                   className="py-1.5 px-4 rounded-xl bg-white/[0.06] hover:bg-white/10 text-cream text-xs border border-white/10"
                 >
                   Refresh Suppliers
