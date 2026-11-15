@@ -46,6 +46,7 @@ async def _build_rfq_response(rfq, db: AsyncSession) -> RfqResponse:
         status=rfq.status,
         published_at=rfq.published_at,
         created_at=rfq.created_at,
+        version=rfq.version,
         auction_config=AuctionConfigResponse(
             trigger_window_minutes=config.trigger_window_minutes,
             extension_duration_minutes=config.extension_duration_minutes,
