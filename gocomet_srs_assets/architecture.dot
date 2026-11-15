@@ -1,0 +1,19 @@
+digraph HLD {
+  graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.42", ranksep="0.52", fontname="Arial", fontsize=15, label="British Auction RFQ System — High-Level Architecture", labelloc=t, labeljust=c];
+  node [shape=box, style="rounded,filled", fillcolor="#F4F7FB", color="#51657A", fontname="Arial", fontsize=12, margin="0.22,0.15", penwidth=1.1];
+  edge [color="#51657A", fontname="Arial", fontsize=10, arrowsize=0.8, penwidth=1.0];
+  buyer [label="Buyer Browser\nReact + TypeScript"];
+  supplier [label="Supplier Browser\nReact + TypeScript"];
+  api [label="FastAPI Application\nAuthentication • RBAC • Validation\nRFQ / Bid / Ranking / Auction Services"];
+  pg [shape=cylinder, label="PostgreSQL — System of Record\nRFQs • Config • Invitations • Bids • Events"];
+  redis [shape=cylinder, label="Redis\nCelery broker / result backend"];
+  worker [label="Celery Worker + Beat\nScheduled activation / close checks\nState reconciliation"];
+  {rank=same; buyer; supplier;}
+  {rank=same; pg; redis;}
+  buyer -> api [label="HTTPS / JSON"];
+  supplier -> api [label="HTTPS / JSON\n3-second active-auction polling"];
+  api -> pg [label="ACID transaction\nrow lock per RFQ"];
+  api -> redis [label="enqueue tasks"];
+  redis -> worker [label="task delivery"];
+  worker -> pg [label="persist state transitions\nand audit events"];
+}

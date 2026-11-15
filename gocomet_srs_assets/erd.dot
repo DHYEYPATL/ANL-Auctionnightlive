@@ -1,0 +1,22 @@
+digraph ERD {
+  graph [rankdir=LR, bgcolor="white", pad="0.25", nodesep="0.35", ranksep="0.7", fontname="Arial", fontsize=11, label="Logical Data Model — Core Entities", labelloc=t];
+  node [shape=record, style="filled", fillcolor="#F7F9FC", color="#51657A", fontname="Arial", fontsize=9, margin="0.12,0.08"];
+  edge [color="#51657A", fontname="Arial", fontsize=8, arrowsize=0.7];
+  users [label="{users|id PK\lemail UNIQUE\lrole\lsupplier_id FK NULL\l}"];
+  suppliers [label="{suppliers|id PK\ldisplay_name\l}"];
+  rfqs [label="{rfqs|id PK\lbuyer_id FK\lstatus\lstart_at / current_close_at\lforced_close_at\lcurrency\l}"];
+  config [label="{auction_configs|id PK\lrfq_id FK UNIQUE\ltrigger_window_minutes\lextension_minutes\ltriggers[]\l}"];
+  access [label="{rfq_suppliers|id PK\lrfq_id FK\lsupplier_id FK\linvitation_status\lUNIQUE(rfq,supplier)\l}"];
+  bids [label="{bids|id PK\lrfq_id FK\lsupplier_id FK\lsubmitted_by_user_id FK\lcharge components\ltotal_amount GENERATED\laccepted_at\l}"];
+  events [label="{auction_events|id PK\lrfq_id FK\lactor_user_id FK NULL\levent_type\ldetails JSONB\loccurred_at\l}"];
+  suppliers -> users [label="1 : many"];
+  users -> rfqs [label="buyer creates"];
+  rfqs -> config [label="1 : 1"];
+  rfqs -> access [label="1 : many"];
+  suppliers -> access [label="1 : many"];
+  rfqs -> bids [label="1 : many"];
+  suppliers -> bids [label="1 : many"];
+  users -> bids [label="submits"];
+  rfqs -> events [label="1 : many"];
+  users -> events [label="actor"];
+}
