@@ -59,7 +59,8 @@ export function StandingsTable({ standings, currency, isBuyer }: StandingsTableP
                 transition={{ duration: 0.3 }}
                 className={clsx(
                   'border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors',
-                  row.rank_number === 1 && 'bg-amber-400/[0.03]'
+                  row.rank_number === 1 && 'bg-amber-400/[0.03]',
+                  row.is_self && 'ring-1 ring-inset ring-accent/20',
                 )}
               >
                 <td className="py-3 pr-4">
