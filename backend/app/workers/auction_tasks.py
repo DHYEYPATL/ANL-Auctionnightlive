@@ -1,11 +1,7 @@
 """
-Hardened Celery worker tasks — HD-LIFE-01 to 06.
-
-HD-LIFE-02: SELECT FOR UPDATE SKIP LOCKED, re-evaluate status after lock
-HD-LIFE-03: INSERT ... ON CONFLICT DO NOTHING for terminal events
-HD-LIFE-04: occurred_at = logical close time, not wall time
-HD-LIFE-05: acks_late, autoretry, time limits
-HD-LIFE-06: persisted status may lag; derived status is authoritative
+Hardened Celery worker — HD-LIFE-01..06.
+Uses a fresh event loop per task invocation to avoid the
+asyncio "attached to a different loop" error on prefork workers.
 """
 import asyncio
 from datetime import datetime, timezone
@@ -19,11 +15,18 @@ from app.workers.celery_app import celery_app
 
 
 def _run(coro):
+    """Always create a fresh event loop — safe for Celery prefork workers."""
     loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
         return loop.run_until_complete(coro)
     finally:
+        try:
+            loop.run_until_complete(loop.shutdown_asyncgens())
+        except Exception:
+            pass
         loop.close()
+        asyncio.set_event_loop(None)
 
 
 @celery_app.task(
@@ -63,7 +66,6 @@ async def _reconcile():
             if not rfq_ids:
                 return
 
-            # Re-fetch each locked row and re-evaluate
             now_row = await db.execute(text("SELECT clock_timestamp()"))
             now: datetime = now_row.scalar_one()
 
@@ -73,45 +75,38 @@ async def _reconcile():
                 if not rfq:
                     continue
 
-                # HD-LIFE-02: re-evaluate after lock
                 derived = evaluate_state(rfq, now)
                 if derived not in ("CLOSED", "FORCE_CLOSED"):
                     continue
                 if rfq.status == derived:
-                    continue  # already correct in DB
+                    continue
 
-                new_status = derived
                 await db.execute(
                     update(Rfq).where(Rfq.id == rfq.id).values(
-                        status=new_status,
+                        status=derived,
                         version=Rfq.version + 1,
                     )
                 )
 
                 # HD-LIFE-04: logical close time as occurred_at
                 logical_close = (
-                    rfq.forced_close_at if new_status == "FORCE_CLOSED"
+                    rfq.forced_close_at if derived == "FORCE_CLOSED"
                     else rfq.current_close_at
                 )
                 lag_ms = int((now - logical_close).total_seconds() * 1000)
-
-                event_type = "AUCTION_FORCE_CLOSED" if new_status == "FORCE_CLOSED" else "AUCTION_CLOSED"
+                event_type = "AUCTION_FORCE_CLOSED" if derived == "FORCE_CLOSED" else "AUCTION_CLOSED"
 
                 # HD-LIFE-03: ON CONFLICT DO NOTHING — idempotent terminal events
-                # We use raw INSERT because append-only trigger blocks UPDATE
                 stmt = pg_insert(AuctionEvent).values(
                     rfq_id=rfq.id,
                     event_type=event_type,
                     occurred_at=logical_close,
                     details={
                         "final_close_at": logical_close.isoformat(),
-                        "reason": new_status,
+                        "reason": derived,
                         "detected_at": now.isoformat(),
                         "lag_ms": lag_ms,
                     },
-                )
-                # Partial unique index ensures only one terminal event per (rfq_id, event_type)
-                stmt = stmt.on_conflict_do_nothing(
-                    constraint="events_terminal_unique"
-                )
+                ).on_conflict_do_nothing(constraint="events_terminal_unique")
+
                 await db.execute(stmt)
