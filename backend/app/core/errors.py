@@ -1,6 +1,6 @@
+import uuid
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
-import uuid
 
 
 class AppError(HTTPException):
@@ -12,7 +12,7 @@ class AppError(HTTPException):
 
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
-    request_id = str(uuid.uuid4())
+    request_id = getattr(request.state, "request_id", str(uuid.uuid4()))
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -23,6 +23,24 @@ async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
                 "request_id": request_id,
             }
         },
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+async def pg_lock_timeout_handler(request: Request, exc: Exception) -> JSONResponse:
+    """HD-CON-06: lock_timeout -> 503 AUCTION_BUSY"""
+    msg = str(exc)
+    if "lock timeout" in msg.lower() or "lock_timeout" in msg.lower():
+        return JSONResponse(
+            status_code=503,
+            content={"error": {"code": "AUCTION_BUSY", "message": "Auction is busy. Retry in a moment."}},
+            headers={"Retry-After": "1", "Cache-Control": "no-store"},
+        )
+    # Other DB operational errors
+    return JSONResponse(
+        status_code=503,
+        content={"error": {"code": "SERVICE_UNAVAILABLE", "message": "Service temporarily unavailable."}},
+        headers={"Retry-After": "2", "Cache-Control": "no-store"},
     )
 
 

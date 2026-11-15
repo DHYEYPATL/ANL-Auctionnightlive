@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import settings
-from app.core.errors import AppError, app_error_handler
+from app.core.errors import AppError, app_error_handler, pg_lock_timeout_handler
 from app.core.logging import setup_logging
 
 setup_logging(settings.DEBUG)
@@ -79,6 +79,13 @@ class BodySizeLimitMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(BodySizeLimitMiddleware)
 app.add_exception_handler(AppError, app_error_handler)  # type: ignore[arg-type]
+
+# HD-CON-06: PostgreSQL lock timeout -> 503
+try:
+    from asyncpg.exceptions import LockNotAvailableError
+    app.add_exception_handler(LockNotAvailableError, pg_lock_timeout_handler)  # type: ignore[arg-type]
+except ImportError:
+    pass
 
 
 @app.middleware("http")
