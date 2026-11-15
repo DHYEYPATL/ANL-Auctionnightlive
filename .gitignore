@@ -34,3 +34,9 @@ Thumbs.db
 # Assignment docs — local only, not for repo
 *.pdf
 British*Hardening*.md
+
+# Loose root images (moved to assets/)
+*.png
+!assets/*.png
+!assets/*.svg
+!gocomet_srs_assets/*.png
