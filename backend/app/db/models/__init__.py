@@ -5,6 +5,7 @@ from .auction_config import AuctionConfig
 from .rfq_supplier import RfqSupplier
 from .bid import Bid
 from .auction_event import AuctionEvent
+from .bid_attempt import BidAttempt
 
 __all__ = [
     "Supplier",
@@ -14,4 +15,5 @@ __all__ = [
     "RfqSupplier",
     "Bid",
     "AuctionEvent",
+    "BidAttempt",
 ]

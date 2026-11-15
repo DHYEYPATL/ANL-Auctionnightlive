@@ -2,7 +2,10 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, Numeric, String, UniqueConstraint, text
+from sqlalchemy import (
+    CheckConstraint, Date, ForeignKey, Integer, Numeric,
+    String, UniqueConstraint, text
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -12,10 +15,12 @@ class Bid(Base):
     __tablename__ = "bids"
     __table_args__ = (
         UniqueConstraint("rfq_id", "supplier_id", "idempotency_key", name="bids_idempotency_unique"),
+        UniqueConstraint("rfq_id", "bid_seq", name="bids_rfq_seq_unique"),
         CheckConstraint("freight_charge >= 0", name="bids_freight_nn"),
         CheckConstraint("origin_charge >= 0", name="bids_origin_nn"),
         CheckConstraint("destination_charge >= 0", name="bids_destination_nn"),
         CheckConstraint("transit_time_days >= 0", name="bids_transit_nn"),
+        CheckConstraint("total_amount > 0", name="bids_total_positive"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, server_default=text("gen_random_uuid()"))
@@ -25,9 +30,15 @@ class Bid(Base):
     freight_charge: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     origin_charge: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     destination_charge: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
-    # total_amount is computed at application level (not GENERATED ALWAYS due to asyncpg limitations)
     total_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     transit_time_days: Mapped[int] = mapped_column(Integer, nullable=False)
     valid_until: Mapped[date] = mapped_column(Date, nullable=False)
     idempotency_key: Mapped[str] = mapped_column(String(128), nullable=False)
+    # Hardening columns
+    bid_seq: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    close_at_before: Mapped[datetime | None] = mapped_column(nullable=True)
+    close_at_after: Mapped[datetime | None] = mapped_column(nullable=True)
+    received_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    lock_wait_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    request_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
     accepted_at: Mapped[datetime] = mapped_column(nullable=False, server_default=text("clock_timestamp()"))

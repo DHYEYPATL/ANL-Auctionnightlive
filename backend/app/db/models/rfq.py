@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import CheckConstraint, Date, ForeignKey, String, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, Date, ForeignKey, Integer, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -34,5 +34,10 @@ class Rfq(Base):
     forced_close_at: Mapped[datetime] = mapped_column(nullable=False)
     status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'DRAFT'"))
     published_at: Mapped[datetime | None] = mapped_column(nullable=True)
+    # Hardening columns (HD-CON-04, HD-CON-15)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    last_bid_seq: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    last_event_seq: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("0"))
+    last_decision_at: Mapped[datetime | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False, server_default=text("clock_timestamp()"))
     updated_at: Mapped[datetime] = mapped_column(nullable=False, server_default=text("clock_timestamp()"))
