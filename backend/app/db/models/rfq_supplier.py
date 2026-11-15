@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint, text
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, Numeric, String, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
+from decimal import Decimal
 
 from app.db.base import Base
 
@@ -23,4 +24,8 @@ class RfqSupplier(Base):
     supplier_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("suppliers.id"), nullable=False)
     invitation_status: Mapped[str] = mapped_column(String(20), nullable=False, server_default=text("'ACTIVE'"))
     anon_label: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    # Denormalized current bid (HD-RT-06)
+    current_bid_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("bids.id"), nullable=True)
+    current_total: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    current_bid_seq: Mapped[int | None] = mapped_column(Integer, nullable=True)
     invited_at: Mapped[datetime] = mapped_column(nullable=False, server_default=text("clock_timestamp()"))
