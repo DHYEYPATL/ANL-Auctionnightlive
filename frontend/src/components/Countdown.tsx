@@ -1,3 +1,7 @@
+/**
+ * Countdown — HD-RT-01: uses performance.now() anchored to server_now,
+ * not Date.now(). Display-only — never used to accept or reject bids.
+ */
 import React, { useEffect, useState } from 'react'
 import { clsx } from 'clsx'
 
@@ -5,26 +9,27 @@ interface CountdownProps {
   targetDate: string
   label?: string
   urgent?: boolean
+  serverNow?: () => number  // optional: estimated server time fn from useAuctionPolling
 }
 
 function pad(n: number) {
-  return String(n).padStart(2, '0')
+  return String(Math.max(0, n)).padStart(2, '0')
 }
 
-function parse(targetDate: string): number {
-  return new Date(targetDate).getTime()
-}
+export function Countdown({ targetDate, label, urgent, serverNow }: CountdownProps) {
+  const targetMs = new Date(targetDate).getTime()
 
-export function Countdown({ targetDate, label, urgent }: CountdownProps) {
-  const [remaining, setRemaining] = useState(() => Math.max(0, parse(targetDate) - Date.now()))
+  const getRemaining = () => {
+    const now = serverNow ? serverNow() : Date.now()
+    return Math.max(0, targetMs - now)
+  }
+
+  const [remaining, setRemaining] = useState(() => getRemaining())
 
   useEffect(() => {
-    const id = setInterval(() => {
-      const r = Math.max(0, parse(targetDate) - Date.now())
-      setRemaining(r)
-    }, 1000)
+    const id = setInterval(() => setRemaining(getRemaining()), 500)
     return () => clearInterval(id)
-  }, [targetDate])
+  }, [targetDate, serverNow])
 
   const totalSecs = Math.floor(remaining / 1000)
   const h = Math.floor(totalSecs / 3600)
@@ -36,7 +41,7 @@ export function Countdown({ targetDate, label, urgent }: CountdownProps) {
     return (
       <div className="text-status-closed text-sm tabular">
         {label && <span className="text-slate-500 mr-2 text-xs">{label}</span>}
-        Ended
+        <span>Closing…</span>
       </div>
     )
   }
