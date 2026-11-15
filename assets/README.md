@@ -1,5 +1,4 @@
 # assets/
 
-Place `logo.png` in this folder (the Auction Night Live banner image).
-
-The README references it as `assets/logo.png`.
+- `logo.svg` — SVG banner used in the README (renders natively on GitHub)
+- `logo.png` — Optional: drop the ANL banner PNG here and update README `src` to `assets/logo.png`

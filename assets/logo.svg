@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300" viewBox="0 0 900 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0f2e"/>
+      <stop offset="100%" style="stop-color:#0d1b4b"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f8ef7"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
+    </linearGradient>
+    <radialGradient id="center-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" style="stop-color:#4f8ef7;stop-opacity:0.25"/>
+      <stop offset="100%" style="stop-color:#0a0f2e;stop-opacity:0"/>
+    </radialGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#4f8ef7" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="300" fill="url(#bg)" rx="16"/>
+  <ellipse cx="450" cy="150" rx="280" ry="180" fill="url(#center-glow)"/>
+
+  <!-- Gavel circle -->
+  <circle cx="450" cy="110" r="65" fill="none" stroke="#4f8ef7" stroke-width="2" opacity="0.6"/>
+  <circle cx="450" cy="110" r="55" fill="rgba(79,142,247,0.1)"/>
+
+  <!-- Gavel icon (simplified) -->
+  <!-- Platform -->
+  <ellipse cx="450" cy="145" rx="28" ry="8" fill="url(#glow)" opacity="0.9"/>
+  <rect x="422" y="128" width="56" height="17" rx="3" fill="url(#glow)" opacity="0.85"/>
+  <!-- Handle -->
+  <rect x="468" y="85" width="14" height="52" rx="7" fill="#c8d8f8" transform="rotate(40 475 111)" opacity="0.95" filter="url(#shadow)"/>
+  <!-- Head -->
+  <rect x="410" y="88" width="38" height="22" rx="8" fill="url(#glow)" filter="url(#shadow)"/>
+  <rect x="410" y="88" width="38" height="10" rx="8" fill="#6b9ff8" opacity="0.5"/>
+
+  <!-- AUCTION text -->
+  <text x="450" y="206" font-family="'Segoe UI', Arial, sans-serif" font-size="52" font-weight="800"
+    fill="white" text-anchor="middle" letter-spacing="6" filter="url(#shadow)">AUCTION</text>
+
+  <!-- NIGHT LIVE badge -->
+  <rect x="310" y="218" width="260" height="38" rx="6" fill="#132047"/>
+  <rect x="310" y="218" width="130" height="38" rx="6" fill="#1a2d5a"/>
+  <!-- LIVE with arrow bg -->
+  <rect x="440" y="218" width="130" height="38" rx="6" fill="#e8e0c8"/>
+
+  <text x="375" y="244" font-family="'Segoe UI', Arial, sans-serif" font-size="20" font-weight="600"
+    fill="white" text-anchor="middle" letter-spacing="4">NIGHT</text>
+  <text x="490" y="244" font-family="'Segoe UI', Arial, sans-serif" font-size="20" font-weight="800"
+    fill="#0a0f2e" text-anchor="middle" letter-spacing="3">LIVE</text>
+  <!-- Play triangle -->
+  <polygon points="563,228 563,246 575,237" fill="#0a0f2e"/>
+
+  <!-- Subtle arc lines -->
+  <path d="M 350 110 A 100 100 0 0 1 550 110" stroke="#4f8ef7" stroke-width="1" fill="none" opacity="0.2"/>
+  <path d="M 335 120 A 115 115 0 0 1 565 120" stroke="#4f8ef7" stroke-width="1" fill="none" opacity="0.1"/>
+</svg>

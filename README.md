@@ -1,8 +1,6 @@
 <div align="center">
-  <img src="assets/logo.png" alt="Auction Night Live" width="600" />
 
-  <br/>
-  <br/>
+  <img src="assets/logo.svg" alt="Auction Night Live" width="700" />
 
   <p>
     <strong>A production-grade British reverse-auction RFQ platform.</strong><br/>

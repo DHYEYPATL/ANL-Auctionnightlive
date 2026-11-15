@@ -14,10 +14,10 @@ erDiagram
 
     users {
         UUID id PK
-        VARCHAR email UK
+        VARCHAR email "UNIQUE"
         TEXT password_hash
         VARCHAR display_name
-        VARCHAR role
+        VARCHAR role "BUYER or SUPPLIER"
         UUID supplier_id FK
         BOOLEAN is_active
         TIMESTAMPTZ created_at
@@ -46,7 +46,7 @@ erDiagram
 
     auction_configs {
         UUID id PK
-        UUID rfq_id FK UK
+        UUID rfq_id FK "UNIQUE"
         SMALLINT trigger_window_minutes
         SMALLINT extension_duration_minutes
         TEXT_ARRAY triggers
