@@ -38,7 +38,7 @@ export function Countdown({ targetDate, label, urgent, serverNow }: Props) {
 
 function Digit({ v, hot }: { v: string; hot?: boolean }) {
   return (
-    <span className={clsx('px-1.5 py-0.5 rounded-lg text-xs', hot ? 'bg-red-500/15' : 'bg-white/[0.06]')}>{v}</span>
+    <span className={clsx('px-1.5 py-0.5 rounded-lg text-xs font-mono font-semibold border', hot ? 'bg-red-500/20 text-red-300 border-red-500/30' : 'bg-white/[0.08] text-cream border-white/[0.08]')}>{v}</span>
   )
 }
-function Sep() { return <span className="text-slate-700 text-xs">:</span> }
+function Sep() { return <span className="text-cream-muted text-xs mx-0.5">:</span> }

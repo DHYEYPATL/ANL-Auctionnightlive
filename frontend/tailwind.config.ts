@@ -5,8 +5,29 @@ export default {
   theme: {
     extend: {
       colors: {
-        base: { 950:'#07070d', 900:'#0d0d14', 800:'#12121a', 700:'#17171f', 600:'#1c1c26', 500:'#22222d' },
+        base: { 950:'#05070c', 900:'#090d16', 800:'#0e1422', 700:'#141b2b', 600:'#1a2337', 500:'#222d44' },
+        cream: {
+          50: '#fefcf8',
+          100: '#faf5ec',
+          200: '#f4ecdc',
+          300: '#e8dcbf',
+          400: '#d5c39c',
+          500: '#bca678',
+          DEFAULT: '#f6f0e4',
+          text: '#fbf7ee',
+          muted: '#b5ab9a',
+          glass: 'rgba(246, 240, 228, 0.08)',
+          'glass-border': 'rgba(246, 240, 228, 0.16)',
+        },
         accent: { DEFAULT:'#6366f1', light:'#818cf8', dark:'#4f46e5', muted:'rgba(99,102,241,0.12)', glow:'rgba(99,102,241,0.25)' },
+        apple: {
+          bg: '#05070c',
+          panel: 'rgba(15, 20, 32, 0.72)',
+          sheet: 'rgba(20, 26, 42, 0.85)',
+          border: 'rgba(255, 255, 255, 0.08)',
+          highlight: 'rgba(255, 255, 255, 0.14)',
+          cream: '#f8f4ea',
+        },
         status: {
           active:'#10b981', 'active-m':'rgba(16,185,129,0.12)',
           scheduled:'#3b82f6', 'scheduled-m':'rgba(59,130,246,0.12)',

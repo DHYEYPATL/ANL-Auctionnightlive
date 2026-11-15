@@ -1,0 +1,89 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='800' height='800' viewBox='0 0 800 800'>
+  <defs>
+    <radialGradient id='bgGrad' cx='50%' cy='50%' r='70%'>
+      <stop offset='0%' stop-color='#0f172a'/>
+      <stop offset='50%' stop-color='#080e1a'/>
+      <stop offset='100%' stop-color='#02050a'/>
+    </radialGradient>
+    <radialGradient id='coreGlow' cx='50%' cy='42%' r='45%'>
+      <stop offset='0%' stop-color='#38bdf8' stop-opacity='0.95'/>
+      <stop offset='30%' stop-color='#2563eb' stop-opacity='0.65'/>
+      <stop offset='70%' stop-color='#1d4ed8' stop-opacity='0.25'/>
+      <stop offset='100%' stop-color='#000000' stop-opacity='0'/>
+    </radialGradient>
+    <linearGradient id='goldGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#ffffff'/>
+      <stop offset='20%' stop-color='#fef08a'/>
+      <stop offset='60%' stop-color='#eab308'/>
+      <stop offset='100%' stop-color='#ca8a04'/>
+    </linearGradient>
+    <linearGradient id='cyanGrad' x1='0%' y1='0%' x2='100%' y2='100%'>
+      <stop offset='0%' stop-color='#ffffff'/>
+      <stop offset='40%' stop-color='#38bdf8'/>
+      <stop offset='100%' stop-color='#0284c7'/>
+    </linearGradient>
+  </defs>
+
+  <!-- Deep Obsidian Canvas -->
+  <rect width='800' height='800' fill='url(#bgGrad)'/>
+  <circle cx='400' cy='360' r='300' fill='url(#coreGlow)'/>
+
+  <!-- Concentric Auction Orbit Rings -->
+  <circle cx='400' cy='360' r='270' fill='none' stroke='#38bdf8' stroke-width='2' stroke-dasharray='10 16' opacity='0.5'/>
+  <circle cx='400' cy='360' r='210' fill='none' stroke='#60a5fa' stroke-width='3' opacity='0.6'/>
+  <circle cx='400' cy='360' r='150' fill='none' stroke='#eab308' stroke-width='2' opacity='0.7'/>
+
+  <!-- Dial Ticks -->
+  <g opacity='0.5'>
+    <line x1='625.0' y1='360.0' x2='648.0' y2='360.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='617.3' y1='418.2' x2='639.5' y2='424.2' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='594.9' y1='472.5' x2='614.8' y2='484.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='559.1' y1='519.1' x2='575.4' y2='535.4' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='512.5' y1='554.9' x2='524.0' y2='574.8' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='458.2' y1='577.3' x2='464.2' y2='599.5' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='400.0' y1='585.0' x2='400.0' y2='608.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='341.8' y1='577.3' x2='335.8' y2='599.5' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='287.5' y1='554.9' x2='276.0' y2='574.8' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='240.9' y1='519.1' x2='224.6' y2='535.4' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='205.1' y1='472.5' x2='185.2' y2='484.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='182.7' y1='418.2' x2='160.5' y2='424.2' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='175.0' y1='360.0' x2='152.0' y2='360.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='182.7' y1='301.8' x2='160.5' y2='295.8' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='205.1' y1='247.5' x2='185.2' y2='236.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='240.9' y1='200.9' x2='224.6' y2='184.6' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='287.5' y1='165.1' x2='276.0' y2='145.2' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='341.8' y1='142.7' x2='335.8' y2='120.5' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='400.0' y1='135.0' x2='400.0' y2='112.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='458.2' y1='142.7' x2='464.2' y2='120.5' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='512.5' y1='165.1' x2='524.0' y2='145.2' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='559.1' y1='200.9' x2='575.4' y2='184.6' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='594.9' y1='247.5' x2='614.8' y2='236.0' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+    <line x1='617.3' y1='301.8' x2='639.5' y2='295.8' stroke='#bae6fd' stroke-width='3' stroke-linecap='round'/>
+  </g>
+
+  <!-- Gavel Head (Angled Luxury Auction Hammer) -->
+  <g transform='translate(400, 340) rotate(-32) translate(-400, -340)'>
+    <!-- Hammer Handle -->
+    <rect x='388' y='310' width='24' height='270' rx='12' fill='url(#cyanGrad)' stroke='#ffffff' stroke-width='2' opacity='0.95'/>
+    <rect x='382' y='550' width='36' height='40' rx='8' fill='url(#goldGrad)'/>
+
+    <!-- Hammer Head Core -->
+    <rect x='300' y='240' width='200' height='76' rx='14' fill='url(#goldGrad)' stroke='#ffffff' stroke-width='3'/>
+    <!-- Left Face Ring -->
+    <rect x='286' y='232' width='24' height='92' rx='6' fill='#ffffff' opacity='0.95'/>
+    <!-- Right Face Ring -->
+    <rect x='490' y='232' width='24' height='92' rx='6' fill='#ffffff' opacity='0.95'/>
+
+    <!-- Decorative Inlay Bands -->
+    <line x1='360' y1='240' x2='360' y2='316' stroke='#0f172a' stroke-width='4'/>
+    <line x1='440' y1='240' x2='440' y2='316' stroke='#0f172a' stroke-width='4'/>
+  </g>
+
+  <!-- Auction Sound Block / Podium Base -->
+  <ellipse cx='400' cy='630' rx='190' ry='38' fill='url(#goldGrad)' stroke='#ffffff' stroke-width='3'/>
+  <ellipse cx='400' cy='616' rx='170' ry='30' fill='#0f172a' stroke='#eab308' stroke-width='2'/>
+
+  <!-- Typography Crest -->
+  <text x='400' y='716' font-family='system-ui, -apple-system, sans-serif' font-weight='800' font-size='28' fill='#fef08a' text-anchor='middle' letter-spacing='6'>AUCTION NIGHT</text>
+  <text x='400' y='748' font-family='system-ui, -apple-system, sans-serif' font-weight='600' font-size='14' fill='#38bdf8' text-anchor='middle' letter-spacing='4'>BRITISH REVERSE RFQ</text>
+</svg>

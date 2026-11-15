@@ -5,10 +5,10 @@
  * HD-CON-10: on timeout/5xx show UNKNOWN state with retry button.
  */
 import React, { useState, useRef } from 'react'
-import { Button } from './ui/Button'
 import type { RfqStatus } from '../types/api'
 import { bidsApi } from '../api/bids'
 import Decimal from 'decimal.js'
+import { ArrowRight, AlertTriangle, Send } from 'lucide-react'
 
 function genKey() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
@@ -68,15 +68,15 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
 
   function validateEntry(): boolean {
     const errs: Record<string, string> = {}
-    if (!strictParseMoney(freight)) errs.freight = 'Use format 1250.50 — no commas or exponents'
+    if (!strictParseMoney(freight)) errs.freight = 'Use format 1250.50'
     if (!strictParseMoney(origin)) errs.origin = 'Use format 1250.50'
     if (!strictParseMoney(destination)) errs.destination = 'Use format 1250.50'
-    if (!transit || isNaN(parseInt(transit)) || parseInt(transit) < 0) errs.transit = 'Enter a whole number ≥ 0'
+    if (!transit || isNaN(parseInt(transit)) || parseInt(transit) < 0) errs.transit = 'Whole number ≥ 0'
     if (parseInt(transit) > 365) errs.transit = 'Max 365 days'
     if (!validUntil) errs.validUntil = 'Required'
-    if (validUntil && validUntil < serviceDate) errs.validUntil = 'Must be on or after service date'
+    if (validUntil && validUntil < serviceDate) errs.validUntil = 'Must be on/after service date'
     if (preview === null) errs.freight = errs.freight || 'Fix money values'
-    if (preview && new Decimal(preview).lessThanOrEqualTo(0)) errs.freight = 'Total must be greater than zero'
+    if (preview && new Decimal(preview).lessThanOrEqualTo(0)) errs.freight = 'Total must be > 0'
     setFieldErrors(errs)
     return Object.keys(errs).length === 0
   }
@@ -105,7 +105,7 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
         },
         idempKeyRef.current
       )
-      onSuccess(`Bid accepted — ${result.rank}${result.extension.applied ? ' · Auction extended!' : ''}`)
+      onSuccess(`Bid accepted — ${result.rank}${result.extension.applied ? ' · Auto-extension triggered!' : ''}`)
       setStep('entry')
       setFreight(''); setOrigin(''); setDestination(''); setTransit(''); setValidUntil('')
     } catch (err: unknown) {
@@ -115,14 +115,14 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
 
       if (code === 'CONFIRMATION_REQUIRED') {
         setConfirmLargeDrop(true)
-        onError(msg + ' Re-confirm to proceed.')
+        onError(msg + ' Please confirm large drop to proceed.')
         setStep('review')
         return
       }
 
       // HD-CON-10: timeout or 5xx = UNKNOWN state
-      const status = (err as { response?: { status?: number } })?.response?.status
-      if (!status || status >= 500) {
+      const statusCode = (err as { response?: { status?: number } })?.response?.status
+      if (!statusCode || statusCode >= 500) {
         setStep('unknown')
         return
       }
@@ -135,12 +135,10 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
   async function handleRetry() {
     retryCountRef.current++
     if (retryCountRef.current > 4) {
-      // Max retries — look up via idempotency key
       onError('Max retries reached. Check your bid history to confirm status.')
       setStep('entry')
       return
     }
-    // Exponential backoff: 1, 2, 4, 8s
     const delay = Math.min(1000 * Math.pow(2, retryCountRef.current - 1), 8000)
     await new Promise(r => setTimeout(r, delay))
     await handleConfirm()
@@ -148,10 +146,10 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
 
   if (!canBid) {
     return (
-      <div className="rounded-lg bg-white/[0.04] border border-white/[0.06] px-4 py-3 text-sm text-slate-400">
-        {status === 'SCHEDULED' && 'Bidding opens when the auction starts.'}
-        {(status === 'CLOSED' || status === 'FORCE_CLOSED') && 'This auction is closed. No new bids accepted.'}
-        {status === 'CANCELLED' && 'This auction was cancelled.'}
+      <div className="rounded-2xl bg-[#080c14]/85 border border-white/10 p-5 text-xs text-cream-muted font-mono">
+        {status === 'SCHEDULED' && 'Bidding opens when the scheduled start time arrives.'}
+        {(status === 'CLOSED' || status === 'FORCE_CLOSED') && 'This auction floor is closed. No further bids accepted.'}
+        {status === 'CANCELLED' && 'This auction RFQ was cancelled.'}
         {status === 'DRAFT' && 'This auction has not been published yet.'}
       </div>
     )
@@ -160,14 +158,24 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
   // UNKNOWN outcome state
   if (step === 'unknown') {
     return (
-      <div className="rounded-xl bg-amber-500/10 border border-amber-500/30 p-5 space-y-3">
-        <p className="text-sm font-medium text-amber-300">Confirming your bid…</p>
-        <p className="text-xs text-slate-400">
-          Your bid may have been accepted. We're retrying with the same key.
+      <div className="rounded-2xl bg-amber-500/10 border border-amber-500/30 p-5 space-y-3">
+        <p className="text-xs font-semibold text-amber-300 uppercase tracking-wider font-mono">Confirming Bid Reception…</p>
+        <p className="text-xs text-slate-300">
+          Your bid may have reached the server. We are retrying with the same idempotency key.
         </p>
-        <div className="flex gap-3">
-          <Button variant="primary" onClick={handleRetry} size="sm">Retry</Button>
-          <Button variant="ghost" onClick={() => setStep('review')} size="sm">Cancel</Button>
+        <div className="flex gap-3 pt-2">
+          <button
+            onClick={handleRetry}
+            className="py-2.5 px-5 rounded-full bg-[#f4ebe1] text-black font-semibold text-xs shadow-md"
+          >
+            Retry Now
+          </button>
+          <button
+            onClick={() => setStep('review')}
+            className="py-2.5 px-5 rounded-full bg-[#0b101a]/75 border border-white/10 text-xs text-slate-300"
+          >
+            Cancel
+          </button>
         </div>
       </div>
     )
@@ -177,55 +185,69 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
   if (step === 'review' || step === 'submitting') {
     return (
       <div className="space-y-4">
-        <div className="rounded-xl bg-base-700/60 border border-white/[0.08] p-4 space-y-2">
-          <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Review Your Bid</p>
-          <div className="grid grid-cols-3 gap-3 text-sm">
+        <div className="rounded-2xl bg-[#080c14]/90 border border-white/10 p-5 space-y-3">
+          <p className="text-[9px] font-mono tracking-widest text-slate-400 uppercase">Review Decrement Quote</p>
+          <div className="grid grid-cols-3 gap-3 text-xs">
             {[['Freight', freight], ['Origin', origin], ['Destination', destination]].map(([l, v]) => (
-              <div key={l}>
-                <p className="text-xs text-slate-500">{l} ({currency})</p>
-                <p className="tabular font-semibold text-slate-200">{v}</p>
+              <div key={l} className="p-2.5 rounded-xl bg-black/40 border border-white/[0.04]">
+                <p className="text-[9px] text-cream-muted font-mono uppercase">{l} ({currency})</p>
+                <p className="tabular font-bold text-cream font-mono mt-0.5">{v}</p>
               </div>
             ))}
           </div>
-          <div className="flex items-center justify-between pt-2 border-t border-white/[0.06]">
+
+          <div className="flex items-center justify-between pt-3 border-t border-white/[0.08]">
             <div>
-              <p className="text-xs text-slate-500">Total</p>
-              <p className="text-xl font-bold tabular text-white">{preview} {currency}</p>
+              <p className="text-[9px] text-cream-muted font-mono uppercase">Total Quote</p>
+              <p className="text-2xl font-bold tabular text-cream font-mono">{preview} {currency}</p>
             </div>
             {previousTotal && (
               <div className="text-right">
-                <p className="text-xs text-slate-500">Previous</p>
-                <p className="text-sm tabular text-slate-400">{previousTotal}</p>
+                <p className="text-[9px] text-cream-muted font-mono uppercase">Previous Accepted</p>
+                <p className="text-xs tabular text-slate-400 font-mono">{previousTotal}</p>
                 {preview && (
-                  <p className={`text-xs ${isLargeDrop ? 'text-amber-400' : 'text-slate-500'}`}>
-                    {preview && previousTotal
-                      ? `${(100 - parseFloat(preview) / parseFloat(previousTotal) * 100).toFixed(1)}% drop`
-                      : ''}
+                  <p className={`text-xs font-mono font-semibold ${isLargeDrop ? 'text-amber-400' : 'text-emerald-400'}`}>
+                    {(100 - (parseFloat(preview) / parseFloat(previousTotal)) * 100).toFixed(1)}% reduction
                   </p>
                 )}
               </div>
             )}
           </div>
+
           {isLargeDrop && !confirmLargeDrop && (
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-300">
-              ⚠ This is a large drop (&gt;50%). Bids are immutable. Confirm to proceed.
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-300 flex items-center gap-2">
+              <AlertTriangle size={14} className="flex-shrink-0" />
+              <span>Large drop detected (&gt;50%). British auction bids are irreversible. Confirm to submit.</span>
             </div>
           )}
-          <p className="text-xs text-slate-600">Transit: {transit} days · Valid until: {validUntil}</p>
+
+          <p className="text-[10px] text-slate-500 font-mono">
+            Transit: {transit} days · Valid until: {validUntil}
+          </p>
         </div>
+
         <div className="flex gap-3">
-          <Button
-            variant="primary"
+          <button
             onClick={handleConfirm}
-            loading={step === 'submitting'}
-            size="lg"
-            className="flex-1"
+            disabled={step === 'submitting'}
+            className="flex-1 py-3 rounded-full bg-[#f4ebe1] hover:bg-[#eadecf] active:scale-[0.99] text-black font-semibold text-xs tracking-wide flex items-center justify-center gap-2 shadow-lg transition-all"
           >
-            {isLargeDrop && !confirmLargeDrop ? 'Confirm Large Drop & Submit' : 'Confirm & Submit Bid'}
-          </Button>
-          <Button variant="secondary" onClick={() => setStep('entry')} disabled={step === 'submitting'}>
+            {step === 'submitting' ? (
+              <span>Broadcasting Bid…</span>
+            ) : (
+              <>
+                <span>{isLargeDrop && !confirmLargeDrop ? 'Confirm Large Drop & Submit' : 'Confirm & Submit Bid'}</span>
+                <Send size={13} />
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => setStep('entry')}
+            disabled={step === 'submitting'}
+            className="py-3 px-6 rounded-full bg-[#0b101a]/75 hover:bg-white/[0.06] border border-white/10 text-xs text-slate-300 font-mono transition-all"
+          >
             Edit
-          </Button>
+          </button>
         </div>
       </div>
     )
@@ -241,70 +263,72 @@ export function BidForm({ rfqId, currency, status, previousTotal, serviceDate, o
           { label: 'Destination', value: destination, set: setDestination, key: 'destination' },
         ].map(({ label, value, set, key }) => (
           <div key={key}>
-            <label className="block text-xs text-slate-500 mb-1.5">{label} ({currency})</label>
-            {/* HD-BID-08: inputmode=decimal, string only */}
+            <label className="block text-xs font-medium text-cream-muted mb-1.5">{label} ({currency})</label>
             <input
               inputMode="decimal"
               type="text"
               value={value}
               onChange={e => {
-                // Strip anything that isn't digits or a single dot
                 const v = e.target.value.replace(/[^0-9.]/g, '')
                 set(v)
               }}
               placeholder="0.00"
-              className="w-full bg-base-700 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-slate-200 tabular placeholder-slate-600 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+              className="w-full bg-[#080c14]/85 border border-white/10 focus:border-white/30 rounded-xl px-4 py-2.5 text-xs text-cream placeholder-slate-500 font-mono focus:outline-none transition-colors"
             />
-            {fieldErrors[key] && <p className="text-xs text-red-400 mt-1">{fieldErrors[key]}</p>}
+            {fieldErrors[key] && <p className="text-[10px] text-red-400 font-mono mt-1">{fieldErrors[key]}</p>}
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs text-slate-500 mb-1.5">Transit Days</label>
+          <label className="block text-xs font-medium text-cream-muted mb-1.5">Transit Days</label>
           <input
             inputMode="numeric"
             type="text"
             value={transit}
             onChange={e => setTransit(e.target.value.replace(/\D/g, ''))}
             placeholder="0"
-            className="w-full bg-base-700 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+            className="w-full bg-[#080c14]/85 border border-white/10 focus:border-white/30 rounded-xl px-4 py-2.5 text-xs text-cream placeholder-slate-500 font-mono focus:outline-none transition-colors"
           />
-          {fieldErrors.transit && <p className="text-xs text-red-400 mt-1">{fieldErrors.transit}</p>}
+          {fieldErrors.transit && <p className="text-[10px] text-red-400 font-mono mt-1">{fieldErrors.transit}</p>}
         </div>
         <div>
-          <label className="block text-xs text-slate-500 mb-1.5">Valid Until</label>
+          <label className="block text-xs font-medium text-cream-muted mb-1.5">Valid Until</label>
           <input
             type="date"
             value={validUntil}
             onChange={e => setValidUntil(e.target.value)}
             min={serviceDate}
-            className="w-full bg-base-700 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/20"
+            className="w-full bg-[#080c14]/85 border border-white/10 focus:border-white/30 rounded-xl px-4 py-2.5 text-xs text-cream placeholder-slate-500 font-mono focus:outline-none transition-colors"
           />
-          {fieldErrors.validUntil && <p className="text-xs text-red-400 mt-1">{fieldErrors.validUntil}</p>}
+          {fieldErrors.validUntil && <p className="text-[10px] text-red-400 font-mono mt-1">{fieldErrors.validUntil}</p>}
         </div>
       </div>
 
-      {/* Preview */}
-      <div className="flex items-center justify-between bg-base-700/60 rounded-lg px-4 py-3 border border-white/[0.06]">
+      {/* Preview Box */}
+      <div className="flex items-center justify-between bg-[#080c14]/90 rounded-2xl px-5 py-3.5 border border-white/10">
         <div>
-          <p className="text-xs text-slate-500">Preview Total ({currency})</p>
-          <p className={`text-xl font-semibold tabular ${preview ? 'text-slate-200' : 'text-slate-600'}`}>
-            {preview ?? '—'}
+          <p className="text-[9px] font-mono tracking-widest text-slate-400 uppercase">Estimated Total ({currency})</p>
+          <p className={`text-xl font-bold font-mono ${preview ? 'text-cream' : 'text-slate-600'}`}>
+            {preview ? `${preview} ${currency}` : '—'}
           </p>
         </div>
         {previousTotal && (
           <div className="text-right">
-            <p className="text-xs text-slate-500">Your Last Accepted</p>
-            <p className="text-sm tabular text-slate-400">{previousTotal}</p>
+            <p className="text-[9px] font-mono tracking-widest text-slate-400 uppercase">Your Last Accepted</p>
+            <p className="text-xs font-mono text-slate-400">{previousTotal} {currency}</p>
           </div>
         )}
       </div>
 
-      <Button type="submit" size="lg" className="w-full">
-        Review Bid
-      </Button>
+      <button
+        type="submit"
+        className="w-full py-3 rounded-full bg-[#f4ebe1] hover:bg-[#eadecf] active:scale-[0.99] text-black font-semibold text-xs tracking-wide flex items-center justify-center gap-2 shadow-lg transition-all"
+      >
+        <span>Review & Validate Bid</span>
+        <ArrowRight size={14} className="stroke-[2.5]" />
+      </button>
     </form>
   )
 }
